@@ -1,0 +1,30 @@
+# Dependencies & build output
+node_modules/
+dist/
+dist-ssr/
+
+# Legacy Capacitor Android workspace & compiled binaries
+android/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Environment & local secrets
+.env
+.env.*
+!.env.example
+
+# Logs & caches
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.vite/
+.cache/
+
+# Editor & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

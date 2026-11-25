@@ -1,0 +1,273 @@
+import type { SpeciesId } from '../types/map';
+
+export interface SpeciesPhotoItem {
+  angle: 'top' | 'side' | 'underside';
+  angleLabel: string;
+  angleShort: string;
+  src: string;
+  caption: string;
+  attribution: string;
+}
+
+export const SPECIES_DEMO_PHOTOS: Record<SpeciesId, SpeciesPhotoItem[]> = {
+  yellowfoot: [
+    {
+      angle: 'top',
+      angleLabel: '俯视（上下 · 菌盖与生境）',
+      angleShort: '俯视 · 菌盖',
+      src: './species-photos/yellowfoot/top.jpg',
+      caption: '褐黄色薄漏斗状菌盖，中央微凹成脐状，常成群生于潮湿苔藓与针叶腐木旁。',
+      attribution: 'iNaturalist · @enspring (CC0)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（整体株型与菌柄）',
+      angleShort: '侧面 · 株型',
+      src: './species-photos/yellowfoot/side.jpg',
+      caption: '细长鲜亮金黄色空心菌柄（柔韧不易断），多株簇生，与深色褐盖对比鲜明。',
+      attribution: 'iNaturalist · @enspring (CC0)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（下上 · 假菌褶与菌柄）',
+      angleShort: '仰视 · 菌褶',
+      src: './species-photos/yellowfoot/underside.jpg',
+      caption: '盖下为灰黄/烟灰色钝圆分叉假菌褶（皱脉），而非刀片状真菌褶；注意与剧毒盔孢伞区分。',
+      attribution: 'iNaturalist · @enspring (CC0)',
+    },
+  ],
+  hedgehog: [
+    {
+      angle: 'top',
+      angleLabel: '俯视（上下 · 菌盖与生境）',
+      angleShort: '俯视 · 菌盖',
+      src: './species-photos/hedgehog/top.jpg',
+      caption: '淡橙至杏奶油色肉质菌盖，边缘常呈波浪不规则状，生于针叶腐殖层与厚苔藓地。',
+      attribution: 'iNaturalist · @alan_rockefeller (CC-BY)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（整体株型与菌柄）',
+      angleShort: '侧面 · 株型',
+      src: './species-photos/hedgehog/side.jpg',
+      caption: '粗实淡色菌柄常略偏心，菌肉厚实脆嫩、极少生虫，耐冷霜冻前持续出菇。',
+      attribution: 'iNaturalist · @alan_rockefeller (CC-BY)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（下上 · 小齿刺特征）',
+      angleShort: '仰视 · 齿刺',
+      src: './species-photos/hedgehog/underside.jpg',
+      caption: '100% 核心鉴别点：菌盖背面长满柔软易脱落的乳白色小针刺（完全无菌褶），新手极安全。',
+      attribution: 'iNaturalist · @alan_rockefeller (CC-BY)',
+    },
+  ],
+  'black-trumpet': [
+    {
+      angle: 'top',
+      angleLabel: '俯视（上下 · 喇叭口与内壁）',
+      angleShort: '俯视 · 喇叭口',
+      src: './species-photos/black-trumpet/top.jpg',
+      caption: '深黑至灰褐色中空漏斗喇叭口，内壁带细微鳞屑，极易融入黑土落叶保护色。',
+      attribution: 'iNaturalist · @chilipossum (CC-BY)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（整体株型与苔藓生境）',
+      angleShort: '侧面 · 株型',
+      src: './species-photos/black-trumpet/side.jpg',
+      caption: '挺立的灰黑色花瓶/号角状子实体，盖柄一体无缝衔接，常成片藏于湿润苔藓洼地。',
+      attribution: 'iNaturalist · @dgwdoesthings (CC0)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（下上 · 外壁光滑产孢面）',
+      angleShort: '仰视 · 外壁',
+      src: './species-photos/black-trumpet/underside.jpg',
+      caption: '外壁呈烟灰至褐灰色，光滑或仅有极浅钝皱纹，绝无真刀片菌褶，撕开中空带浓郁果香。',
+      attribution: 'iNaturalist · @heymana77 (CC0)',
+    },
+  ],
+  oyster: [
+    {
+      angle: 'top',
+      angleLabel: '俯视（上下 · 扇形群生菌盖）',
+      angleShort: '俯视 · 菌盖',
+      src: './species-photos/oyster/top.jpg',
+      caption: '乳白至浅灰褐色厚肉扇形菌盖，层叠复瓦状群生于倒伏枯死的红桤木/杨树等阔叶木上。',
+      attribution: 'iNaturalist · @treegrow (CC-BY)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（叠层群生姿态）',
+      angleShort: '侧面 · 株型',
+      src: './species-photos/oyster/side.jpg',
+      caption: '侧生于河谷阔叶枯木树干，厚肉饱满；切记只采阔叶木上的厚肉平菇，避开针叶木薄脆“天使之翼”。',
+      attribution: 'iNaturalist · @treegrow (CC-BY)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（下上 · 延生菌褶特征）',
+      angleShort: '仰视 · 菌褶',
+      src: './species-photos/oyster/underside.jpg',
+      caption: '洁白致密菌褶一直顺延下垂至短侧柄基部（延生），菌肉厚实带淡淡清甜茴香味。',
+      attribution: 'iNaturalist · @cara-lisa (CC-BY)',
+    },
+  ],
+  'lions-mane': [
+    {
+      angle: 'top',
+      angleLabel: '俯视（上下 · 雪白簇团外观）',
+      angleShort: '俯视 · 菌体',
+      src: './species-photos/lions-mane/top.jpg',
+      caption: '纯白至乳白色分枝珊瑚球状，生于高郁闭度老龄冷杉/铁杉粗大倒木，鲜白时口感最佳。',
+      attribution: 'iNaturalist · @cgmayers (CC0)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（老林树干垂瀑姿态）',
+      angleShort: '侧面 · 株型',
+      src: './species-photos/lions-mane/side.jpg',
+      caption: '如白色瀑布般侧挂在长满苔藓的粗大针叶枯木上，同一根倒木常连续多年在同一位置出菇。',
+      attribution: 'iNaturalist · @michaelsmith5 (CC0)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（下上 · 冰柱状软齿刺）',
+      angleShort: '仰视 · 软刺',
+      src: './species-photos/lions-mane/underside.jpg',
+      caption: '从下方仰视可见整齐垂挂的雪白冰柱状软刺，辨识度 100%，几乎无任何有毒混淆种。',
+      attribution: 'iNaturalist · @michaelsmith5 (CC0)',
+    },
+  ],
+  chanterelle: [
+    {
+      angle: 'top',
+      angleLabel: '俯视（上下 · 杏黄菌盖特征）',
+      angleShort: '俯视 · 菌盖',
+      src: './species-photos/chanterelle/top.jpg',
+      caption: '光滑温润的杏黄至蛋黄色菌盖，成熟后边缘波浪微翘，常隐藏在 45–80 年次生花旗松苔藓下。',
+      attribution: 'iNaturalist · @treegrow (CC-BY)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（土生肥厚株型）',
+      angleShort: '侧面 · 株型',
+      src: './species-photos/chanterelle/side.jpg',
+      caption: '直接生于针叶林土壤苔藓中（非木生），菌柄粗壮实心，撕开内部菌肉如鸡胸肉般雪白丝状。',
+      attribution: 'iNaturalist · @alan_rockefeller (CC-BY)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（下上 · 分叉钝假菌褶）',
+      angleShort: '仰视 · 假菌褶',
+      src: './species-photos/chanterelle/underside.jpg',
+      caption: '核心特征：钝圆分叉并相互交联的假菌褶（与菌盖一体不可剥离），微带淡淡杏果香。',
+      attribution: 'iNaturalist · @elizacrofts (CC-BY)',
+    },
+  ],
+  matsutake: [
+    {
+      angle: 'top',
+      angleLabel: '俯视（上下 · 破土松针盖面）',
+      angleShort: '俯视 · 菌盖',
+      src: './species-photos/matsutake/top.jpg',
+      caption: '初生时常藏于砂土与松针隆起的“蘑菇包”下，白色菌盖带浅褐纤维鳞片，质地极硬实。',
+      attribution: 'iNaturalist · @biljana_katic (CC0)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（砂土基部与硬实菌柄）',
+      angleShort: '侧面 · 株型',
+      src: './species-photos/matsutake/side.jpg',
+      caption: '粗实韧性菌柄上白下褐、基部带砂砾且无膨大易碎菌托；务必逐朵核对浓郁肉桂+松脂辛香！',
+      attribution: 'iNaturalist · @alan_rockefeller (CC-BY)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（下上 · 白色菌褶与棉质菌幕）',
+      angleShort: '仰视 · 菌幕',
+      src: './species-photos/matsutake/underside.jpg',
+      caption: '致密白色菌褶与厚实棉质菌环/菌幕（切记严防无肉桂香、基部具脆弱菌托的剧毒史密斯鹅膏！）。',
+      attribution: 'iNaturalist · @biljana_katic (CC0)',
+    },
+  ],
+  porcini: [
+    {
+      angle: 'top',
+      angleLabel: '俯视 / 斜俯（栗棕面包菌盖与白网纹）',
+      angleShort: '俯视 · 菌盖',
+      src: './species-photos/porcini/top.jpg',
+      caption: '烤栗色光滑半球形“面包盖”，肥厚大肚柄表面具清晰白色细网纹（与粗糙黑点疣柄牛肝菌明显不同）。',
+      attribution: 'iNaturalist · @alan_rockefeller (CC-BY)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（针叶林典型粗壮株型）',
+      angleShort: '侧面 · 株型',
+      src: './species-photos/porcini/side.jpg',
+      caption: '典型金褐/浅栗色圆顶菌盖配粗壮大肚奶油色网纹菌柄，生于针叶腐殖层中，菌肉紧实雪白。',
+      attribution: '用户精选实拍参考图',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（纯白幼嫩海绵菌管与柄上网纹）',
+      angleShort: '仰视 · 菌管',
+      src: './species-photos/porcini/underside.jpg',
+      caption: '幼嫩期盖下为洁白致密海绵状菌管孔（成熟后转黄绿，无菌褶），柄上立体白色网纹清晰可见。',
+      attribution: '用户精选实拍参考图',
+    },
+  ],
+  leccinum: [
+    {
+      angle: 'top',
+      angleLabel: '俯视（上下 · 橙褐/棕褐圆顶菌盖）',
+      angleShort: '俯视 · 菌盖',
+      src: './species-photos/leccinum/top.jpg',
+      caption: '半球至枕状棕褐/橙褐色菌盖，常见于白桦、颤杨（Aspen）或马醉木/熊果林下落叶与草地边缘。',
+      attribution: 'iNaturalist · @yggdrasi (CC-BY)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（标志性黑褐点状粗糙疣柄）',
+      angleShort: '侧面 · 疣柄',
+      src: './species-photos/leccinum/side.jpg',
+      caption: '100% 核心鉴别点：浅色菌柄表面布满竖排凸起的黑褐色粗糙小疣点（scabers，非美味牛肝菌的细网纹）。',
+      attribution: 'iNaturalist · @alan_rockefeller (CC-BY)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（下上 · 细密菌管与黑褐鳞片特写）',
+      angleShort: '仰视 · 菌管与疣点',
+      src: './species-photos/leccinum/underside.jpg',
+      caption: '盖下为白至灰白色细密海绵状菌管，紧邻柄上部密布黑褐砂纸状鳞片；切开菌肉常缓慢变灰黑，务必高温久煮！',
+      attribution: 'iNaturalist · @yggdrasi (CC-BY)',
+    },
+  ],
+  morel: [
+    {
+      angle: 'top',
+      angleLabel: '俯视（上下 · 蜂窝深凹坑菌盖）',
+      angleShort: '俯视 · 蜂窝盖',
+      src: './species-photos/morel/top.jpg',
+      caption: '立体清晰的深蜂窝状网格凹坑（而非脑回状褶皱），黑褐色菌脊是 PNW 火烧羊肚菌经典色泽。',
+      attribution: 'iNaturalist · @pinonbistro (CC-BY-NC)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（火烧迹地直立株型）',
+      angleShort: '侧面 · 株型',
+      src: './species-photos/morel/side.jpg',
+      caption: '挺立于前一年野火过火后的针叶灰烬与苔藓地面，菌盖下缘平滑贴合菌柄而非像伞裙般垂挂。',
+      attribution: 'iNaturalist · @mbowser (CC-BY)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视 / 纵切（100% 完全中空鉴别）',
+      angleShort: '纵切 · 全中空',
+      src: './species-photos/morel/underside.jpg',
+      caption: '最关键安全核验：纵切从顶到柄底必须 100% 贯通中空，无棉絮填充（严防有毒实心假羊肚菌）！',
+      attribution: 'iNaturalist · @pinonbistro (CC-BY-SA)',
+    },
+  ],
+};
