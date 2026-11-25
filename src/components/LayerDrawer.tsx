@@ -17,25 +17,35 @@ import {
   OVERLAYS,
   PNW_YELLOWFOOT_HOTSPOTS,
 } from '../data/mapSources';
-import { getSpeciesProfile } from '../data/speciesCatalog';
+import { getSpeciesProfile, getSpeciesShortName } from '../data/speciesCatalog';
+import { UI_TEXT } from '../i18n/translations';
 import { HIGH_CONTRAST_LEGENDS } from '../services/tileEngines';
 import { formatDistanceFromCenter, haversineMiles } from '../utils/geo';
+import {
+  formatAreaFromAcres,
+  formatElevation,
+  formatElevationRange,
+} from '../utils/units';
 import type {
   BasemapId,
   ElevBandParams,
   FireSummary,
   InatObservation,
   InatTimeRange,
+  Lang,
   OverlayRuntimeState,
   PnwHotspot,
   SpeciesId,
   SpeciesModelOverride,
+  UnitSettings,
 } from '../types/map';
 
 interface LayerDrawerProps {
   open: boolean;
   initialTab: 'layers' | 'spots' | 'fires' | 'basemaps';
   speciesId: SpeciesId;
+  lang: Lang;
+  units: UnitSettings;
   onClose: () => void;
   basemapId: BasemapId;
   onSelectBasemap: (id: BasemapId) => void;
@@ -72,6 +82,8 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
   open,
   initialTab,
   speciesId,
+  lang,
+  units,
   onClose,
   basemapId,
   onSelectBasemap,
@@ -111,7 +123,9 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
   const [stateFilter, setStateFilter] = useState('ALL');
   const [rankFilter, setRankFilter] = useState('ALL');
 
+  const t = UI_TEXT[lang];
   const profile = getSpeciesProfile(speciesId);
+  const spShort = getSpeciesShortName(profile, lang);
 
   const sortedInatItems = useMemo(() => {
     const withDist = inatItems.map((obs) => ({
@@ -157,7 +171,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
       <div className="drawer-backdrop" onClick={onClose} />
       <aside className="drawer-panel">
         <div className="drawer-header">
-          <h2>地图资源与图层</h2>
+          <h2>{t.drawerTitle}</h2>
           <button className="icon-close" onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
@@ -168,25 +182,25 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
             className={`drawer-tab ${tab === 'layers' ? 'active' : ''}`}
             onClick={() => setTab('layers')}
           >
-            <Layers size={13} /> 图层
+            <Layers size={13} /> {t.tabLayers}
           </button>
           <button
             className={`drawer-tab ${tab === 'spots' ? 'active' : ''}`}
             onClick={() => setTab('spots')}
           >
-            <Camera size={13} /> 实拍
+            <Camera size={13} /> {t.tabSpots}
           </button>
           <button
             className={`drawer-tab ${tab === 'fires' ? 'active' : ''}`}
             onClick={() => setTab('fires')}
           >
-            <Flame size={13} /> 火场
+            <Flame size={13} /> {t.tabFires}
           </button>
           <button
             className={`drawer-tab ${tab === 'basemaps' ? 'active' : ''}`}
             onClick={() => setTab('basemaps')}
           >
-            <MapIcon size={13} /> 底图
+            <MapIcon size={13} /> {t.tabBasemaps}
           </button>
         </div>
 
@@ -206,9 +220,11 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                     }
                   >
                     <span>
-                      {cat.name}{' '}
+                      {lang === 'en' ? cat.nameEn : cat.name}{' '}
                       {activeCount > 0 && (
-                        <span style={{ color: '#facc15', fontSize: 11 }}>({activeCount} 开启)</span>
+                        <span style={{ color: '#facc15', fontSize: 11 }}>
+                          {t.catActiveCount(activeCount)}
+                        </span>
                       )}
                     </span>
                     {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
@@ -223,8 +239,11 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                         };
                         const displayName =
                           ov.id === 'species-probability'
-                            ? `${profile.emoji} ${profile.shortName} · 实时热力模型`
-                            : ov.name;
+                            ? `${profile.emoji} ${spShort}${t.speciesModelSuffix}`
+                            : lang === 'en'
+                              ? ov.nameEn
+                              : ov.name;
+                        const displayDesc = lang === 'en' ? ov.descriptionEn : ov.description;
                         const displayColor =
                           ov.id === 'species-probability' ? profile.accentColor : ov.color;
                         const displayLegends =
@@ -248,8 +267,8 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                               />
                             </div>
                             <div className="overlay-desc">
-                              {ov.description}
-                              {st.loading && ' · 加载中...'}
+                              {displayDesc}
+                              {st.loading && t.loadingSuffix}
                               {st.error && (
                                 <span style={{ color: '#f87171' }}> · {st.error}</span>
                               )}
@@ -258,7 +277,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                             {st.visible && (
                               <div className="overlay-controls">
                                 <div className="slider-row">
-                                  <span>透明度</span>
+                                  <span>{t.opacityLabel}</span>
                                   <input
                                     type="range"
                                     min={0}
@@ -275,7 +294,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                 {ov.id === 'species-probability' && (
                                   <>
                                     <div className="slider-row">
-                                      <span>筛选强度</span>
+                                      <span>{t.filterStrengthLabel}</span>
                                       <input
                                         type="range"
                                         min={0}
@@ -289,14 +308,14 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                       <span>{filterStrength}%</span>
                                     </div>
                                     <div className="mini-toggle-row">
-                                      <span>高反差热成像色阶（全底图高对比）</span>
+                                      <span>{t.highContrastToggle}</span>
                                       <button
                                         className={`switch ${highContrast ? 'on' : ''}`}
                                         onClick={onToggleHighContrast}
                                       />
                                     </div>
                                     <div className="mini-toggle-row">
-                                      <span>⚡ 1Hz 闪烁对比（透视底图）</span>
+                                      <span>{t.blinkToggle}</span>
                                       <button
                                         className={`switch ${blinkEnabled ? 'on' : ''}`}
                                         onClick={onToggleBlink}
@@ -304,7 +323,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                     </div>
                                     {speciesId === 'morel' && (
                                       <div className="mini-toggle-row">
-                                        <span>仅限火烧迹地内渲染 (Burn Scars)</span>
+                                        <span>{t.burnScarOnlyToggle}</span>
                                         <button
                                           className={`switch ${speciesParams.burnScarOnly ? 'on' : ''}`}
                                           onClick={() =>
@@ -317,7 +336,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                       </div>
                                     )}
                                     <div className="mini-toggle-row">
-                                      <span>融合 NLCD 30m 密林树冠</span>
+                                      <span>{t.useCanopyToggle}</span>
                                       <button
                                         className={`switch ${speciesParams.useCanopy ? 'on' : ''}`}
                                         onClick={() =>
@@ -329,7 +348,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                       />
                                     </div>
                                     <div className="slider-row">
-                                      <span>最低郁闭度</span>
+                                      <span>{t.minCanopyLabel}</span>
                                       <input
                                         type="range"
                                         min={20}
@@ -346,7 +365,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                       <span>{speciesParams.minCanopyPct}%</span>
                                     </div>
                                     <div className="slider-row">
-                                      <span>海拔下限</span>
+                                      <span>{t.minElevLabel}</span>
                                       <input
                                         type="range"
                                         min={0}
@@ -363,10 +382,10 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                           })
                                         }
                                       />
-                                      <span>{speciesParams.minElevFt} ft</span>
+                                      <span>{formatElevation(speciesParams.minElevFt, units)}</span>
                                     </div>
                                     <div className="slider-row">
-                                      <span>海拔上限</span>
+                                      <span>{t.maxElevLabel}</span>
                                       <input
                                         type="range"
                                         min={1000}
@@ -383,7 +402,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                           })
                                         }
                                       />
-                                      <span>{speciesParams.maxElevFt} ft</span>
+                                      <span>{formatElevation(speciesParams.maxElevFt, units)}</span>
                                     </div>
                                   </>
                                 )}
@@ -391,7 +410,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                 {ov.id === 'elevation-band' && (
                                   <>
                                     <div className="slider-row">
-                                      <span>最低海拔</span>
+                                      <span>{t.elevBandMinLabel}</span>
                                       <input
                                         type="range"
                                         min={0}
@@ -408,10 +427,10 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                           })
                                         }
                                       />
-                                      <span>{elevBandParams.minFt} ft</span>
+                                      <span>{formatElevation(elevBandParams.minFt, units)}</span>
                                     </div>
                                     <div className="slider-row">
-                                      <span>最高海拔</span>
+                                      <span>{t.elevBandMaxLabel}</span>
                                       <input
                                         type="range"
                                         min={500}
@@ -428,22 +447,26 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                           })
                                         }
                                       />
-                                      <span>{elevBandParams.maxFt} ft</span>
+                                      <span>{formatElevation(elevBandParams.maxFt, units)}</span>
                                     </div>
                                   </>
                                 )}
 
                                 {displayLegends && displayLegends.length > 0 && (
                                   <div className="inline-legend">
-                                    {displayLegends.map((lg) => (
-                                      <span className="inline-legend-item" key={lg.label}>
-                                        <span
-                                          className="swatch"
-                                          style={{ background: lg.color, width: 9, height: 9 }}
-                                        />
-                                        {lg.label}
-                                      </span>
-                                    ))}
+                                    {displayLegends.map((lg) => {
+                                      const lgLabel =
+                                        lang === 'en' && lg.labelEn ? lg.labelEn : lg.label;
+                                      return (
+                                        <span className="inline-legend-item" key={lg.label}>
+                                          <span
+                                            className="swatch"
+                                            style={{ background: lg.color, width: 9, height: 9 }}
+                                          />
+                                          {lgLabel}
+                                        </span>
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
@@ -472,9 +495,9 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: '#fbcfe8' }}>
-                    iNaturalist 实拍 · {profile.emoji} {profile.shortName}
+                    {t.inatHeader(profile.emoji, spShort)}
                     <span style={{ color: '#9aa9a0', fontWeight: 500, marginLeft: 5 }}>
-                      ({inatTotal.toLocaleString()} 条)
+                      {t.inatRecordsCount(inatTotal.toLocaleString())}
                     </span>
                   </div>
                   <button
@@ -490,9 +513,9 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                 <div style={{ display: 'flex', gap: 5 }}>
                   {(
                     [
-                      ['30d', '近 30 天'],
-                      ['365d', '近 1 年'],
-                      ['all', '历年全部'],
+                      ['30d', t.inatRange30d],
+                      ['365d', t.inatRange365d],
+                      ['all', t.inatRangeAll],
                     ] as Array<[InatTimeRange, string]>
                   ).map(([val, label]) => (
                     <button
@@ -520,7 +543,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                 </div>
 
                 <div className="mini-toggle-row" style={{ fontSize: 11 }}>
-                  <span>仅查询当前屏幕视野内实拍</span>
+                  <span>{t.inatViewportToggle}</span>
                   <button
                     className={`switch ${inatViewportOnly ? 'on' : ''}`}
                     onClick={onToggleInatViewportOnly}
@@ -530,8 +553,8 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                 <div style={{ display: 'flex', gap: 5 }}>
                   {(
                     [
-                      ['recent', '按时间最新'],
-                      ['distance', '✚ 按距中心最近'],
+                      ['recent', t.inatSortRecent],
+                      ['distance', t.inatSortDistance],
                     ] as Array<['recent' | 'distance', string]>
                   ).map(([val, label]) => (
                     <button
@@ -561,13 +584,13 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
 
               {inatLoading && (
                 <div style={{ fontSize: 12, color: '#9aa9a0', padding: '4px 2px' }}>
-                  正在从 iNaturalist 拉取最新研究级实拍记录...
+                  {t.inatLoading}
                 </div>
               )}
 
               {!inatLoading && sortedInatItems.length === 0 && (
                 <div style={{ fontSize: 12, color: '#9aa9a0', padding: '10px 4px' }}>
-                  该时间段/范围内暂无实拍记录，可切换到「近 1 年」或「历年全部」。
+                  {t.inatEmpty}
                 </div>
               )}
 
@@ -623,11 +646,11 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                         {obs.observedOn} · @{obs.userLogin}
                       </div>
                       <div style={{ fontSize: 10, color: '#9aa9a0', marginTop: 1 }}>
-                        {obs.obscured ? '模糊隐私坐标' : '精确 GPS'} · {obs.lat.toFixed(3)},{' '}
+                        {obs.obscured ? t.gpsObscured : t.gpsExact} · {obs.lat.toFixed(3)},{' '}
                         {obs.lng.toFixed(3)}
                       </div>
                       <div className="poi-distance-pill">
-                        ✚ 距中心 {formatDistanceFromCenter(distMi)}
+                        {t.distFromCenter} {formatDistanceFromCenter(distMi, units)}
                       </div>
                     </div>
                   </div>
@@ -640,7 +663,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                   className="section-header"
                   onClick={() => setShowCuratedSpots((v) => !v)}
                 >
-                  <span>PNW 精选公共林区书签 ({sortedHotspots.length})</span>
+                  <span>{t.curatedSpotsHeader(sortedHotspots.length)}</span>
                   {showCuratedSpots ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                 </div>
                 {showCuratedSpots && (
@@ -667,12 +690,15 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                             {spot.state}
                           </span>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 700 }}>{spot.name}</div>
+                            <div style={{ fontSize: 12, fontWeight: 700 }}>
+                              {lang === 'en' && spot.nameEn ? spot.nameEn : spot.name}
+                            </div>
                             <div style={{ fontSize: 11, color: '#facc15', marginTop: 1 }}>
-                              {spot.region} · {spot.elevBand}
+                              {lang === 'en' ? spot.regionEn : spot.region} ·{' '}
+                              {formatElevationRange(spot.elevMinFt, spot.elevMaxFt, units)}
                             </div>
                             <div className="poi-distance-pill">
-                              ✚ 距中心 {formatDistanceFromCenter(distMi)}
+                              {t.distFromCenter} {formatDistanceFromCenter(distMi, units)}
                             </div>
                           </div>
                         </div>
@@ -690,7 +716,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
               <div className="filter-bar">
                 <input
                   className="filter-input"
-                  placeholder="搜索火场名 (如 Park, Big Grass...)"
+                  placeholder={t.fireSearchPlaceholder}
                   value={fireSearch}
                   onChange={(e) => setFireSearch(e.target.value)}
                 />
@@ -699,7 +725,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                   value={stateFilter}
                   onChange={(e) => setStateFilter(e.target.value)}
                 >
-                  <option value="ALL">全部州</option>
+                  <option value="ALL">{t.allStates}</option>
                   {availableStates.map((st) => (
                     <option key={st} value={st}>
                       {st}
@@ -711,22 +737,22 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                   value={rankFilter}
                   onChange={(e) => setRankFilter(e.target.value)}
                 >
-                  <option value="ALL">全评级</option>
-                  <option value="A">A 级</option>
-                  <option value="B">B 级</option>
-                  <option value="C">C 级</option>
+                  <option value="ALL">{t.allRanks}</option>
+                  <option value="A">{t.rankOption('A')}</option>
+                  <option value="B">{t.rankOption('B')}</option>
+                  <option value="C">{t.rankOption('C')}</option>
                 </select>
               </div>
 
               {firesLoading && (
                 <div style={{ fontSize: 12, color: '#9aa9a0', padding: '6px 2px' }}>
-                  正在从 NIFC 拉取北美野火过火边界...
+                  {t.firesLoading}
                 </div>
               )}
 
               {!firesLoading && filteredFires.length === 0 && (
                 <div style={{ fontSize: 12, color: '#9aa9a0', padding: '12px 4px' }}>
-                  暂无已开启火场（在顶部切换「火烧羊肚菌」或在「图层」中开启野火图层即可加载）。
+                  {t.firesEmpty}
                 </div>
               )}
 
@@ -754,10 +780,10 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                         {fire.name}
                       </div>
                       <div style={{ fontSize: 11, color: '#9aa9a0', marginTop: 2 }}>
-                        {fire.year} · {fire.state} · {fire.acres.toLocaleString()} ac
+                        {fire.year} · {fire.state} · {formatAreaFromAcres(fire.acres, units, lang)}
                       </div>
                       <div className="poi-distance-pill">
-                        ✚ 距中心{' '}
+                        {t.distFromCenter}{' '}
                         {formatDistanceFromCenter(
                           haversineMiles(
                             mapCenter[0],
@@ -765,6 +791,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                             fire.center[0],
                             fire.center[1],
                           ),
+                          units,
                         )}
                       </div>
                     </div>
@@ -778,7 +805,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
           {tab === 'basemaps' && (
             <>
               <div style={{ fontSize: 11, color: '#9aa9a0', marginBottom: 2 }}>
-                所有底图均使用免费公开官方瓦片源，无需 Mapbox 收费 Token。
+                {t.basemapsNote}
               </div>
               {BASEMAPS.map((bm) => (
                 <div
@@ -787,9 +814,11 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                   onClick={() => onSelectBasemap(bm.id)}
                 >
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{bm.name}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>
+                      {lang === 'en' ? bm.nameEn : bm.name}
+                    </div>
                     <div style={{ fontSize: 11, color: '#9aa9a0', marginTop: 2 }}>
-                      {bm.subtitle}
+                      {lang === 'en' ? bm.subtitleEn : bm.subtitle}
                     </div>
                   </div>
                   <Compass size={18} color={bm.id === basemapId ? '#e06936' : '#64748b'} />

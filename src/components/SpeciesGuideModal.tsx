@@ -11,11 +11,23 @@ import {
   X,
   ZoomIn,
 } from 'lucide-react';
-import { getCurrentSeasonStatus, type SpeciesProfile } from '../data/speciesCatalog';
+import {
+  getCurrentSeasonStatus,
+  getSpeciesDisplayName,
+  getSpeciesElevSummary,
+  getSpeciesGuide,
+  getSpeciesSeasonSummary,
+  getSpeciesShortName,
+  type SpeciesProfile,
+} from '../data/speciesCatalog';
 import { SPECIES_DEMO_PHOTOS, type SpeciesPhotoItem } from '../data/speciesPhotos';
+import { formatMonthLabel, MONTH_SHORT_EN, UI_TEXT } from '../i18n/translations';
+import type { Lang, UnitSettings } from '../types/map';
 
 interface SpeciesGuideModalProps {
   profile: SpeciesProfile | null;
+  lang: Lang;
+  units: UnitSettings;
   onClose: () => void;
 }
 
@@ -23,6 +35,8 @@ const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
   profile,
+  lang,
+  units,
   onClose,
 }) => {
   const [showPhotoDemo, setShowPhotoDemo] = useState(false);
@@ -37,23 +51,32 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
 
   if (!profile) return null;
 
+  const t = UI_TEXT[lang];
   const currentMonth = new Date().getMonth() + 1;
-  const season = getCurrentSeasonStatus(profile.peakMonths);
+  const monthStr = formatMonthLabel(currentMonth, lang);
+  const season = getCurrentSeasonStatus(profile.peakMonths, lang);
+  const seasonSummary = getSpeciesSeasonSummary(profile, lang);
+  const elevSummary = getSpeciesElevSummary(profile, lang, units);
+  const guide = getSpeciesGuide(profile, lang);
+  const displayName = getSpeciesDisplayName(profile, lang);
+  const shortName = getSpeciesShortName(profile, lang);
   const photos = SPECIES_DEMO_PHOTOS[profile.id] || [];
 
   const seasonHeadline =
     season.tone === 'peak'
-      ? `✅ 当前正是采摘盛季 · ${currentMonth} 月推荐出山`
+      ? t.seasonHeadlinePeak(monthStr)
       : season.tone === 'shoulder'
-        ? `⏳ 当前为季初 / 尾声 · ${currentMonth} 月局部海拔零星出菇`
-        : `⛔ 当前非当季（当前 ${currentMonth} 月 · 盛季 ${profile.seasonSummary}）`;
+        ? t.seasonHeadlineShoulder(monthStr)
+        : t.seasonHeadlineOff(monthStr, seasonSummary);
 
   const seasonSubline =
     season.tone === 'peak'
-      ? `本月命中黄金窗口（${profile.seasonSummary}），可结合热力图与近 30 天实拍直接选点`
+      ? t.seasonSubPeak(seasonSummary)
       : season.tone === 'shoulder'
-        ? `临近出菇边缘（盛季 ${profile.seasonSummary}），建议重点看低/高海拔临界带`
-        : `此时野外极难遇到该菌种，当前更适合提前踩点研究地形与往年实拍热区`;
+        ? t.seasonSubShoulder(seasonSummary)
+        : t.seasonSubOff;
+
+  const activePhoto = photos[activeAngleIdx];
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -80,7 +103,7 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800 }}>
-                  {showPhotoDemo ? `${profile.shortName} · 3 角度辨识图鉴` : profile.name}
+                  {showPhotoDemo ? t.guidePhotoTitle(shortName) : displayName}
                 </h3>
                 <span className={`season-pill-strong tone-${season.tone}`}>
                   {season.tone === 'peak' ? '● ' : season.tone === 'off' ? '⛔ ' : '⏳ '}
@@ -88,7 +111,8 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
                 </span>
               </div>
               <div style={{ fontSize: 11, color: '#9aa9a0', marginTop: 2 }}>
-                <em>{profile.scientificName}</em> · {profile.englishName}
+                <em>{profile.scientificName}</em>
+                {lang === 'zh' ? ` · ${profile.englishName}` : ` · ${profile.name}`}
               </div>
             </div>
           </div>
@@ -111,9 +135,9 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
                     <div
                       key={m}
                       className={`season-month-cell ${isPeak ? 'is-peak' : ''} ${isNow ? 'is-now' : ''}`}
-                      title={`${m} 月${isPeak ? '（盛季）' : '（非盛季）'}${isNow ? ' · 当前月份' : ''}`}
+                      title={t.monthTooltip(m, isPeak, isNow)}
                     >
-                      <span>{m}</span>
+                      <span>{lang === 'en' ? MONTH_SHORT_EN[m - 1][0] : m}</span>
                     </div>
                   );
                 })}
@@ -132,7 +156,11 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
               >
                 <div className="photo-demo-thumbs">
                   {photos.map((ph) => (
-                    <img key={ph.angle} src={ph.src} alt={ph.angleShort} />
+                    <img
+                      key={ph.angle}
+                      src={ph.src}
+                      alt={lang === 'en' ? ph.angleShortEn : ph.angleShort}
+                    />
                   ))}
                 </div>
                 <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
@@ -147,10 +175,10 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
                     }}
                   >
                     <Camera size={14} color="#facc15" />
-                    查看 3 角度辨识图鉴（离线内置）
+                    {t.photoDemoBtnTitle}
                   </div>
                   <div style={{ fontSize: 10.5, color: '#cbd5e1', marginTop: 2 }}>
-                    俯视（上下） · 侧面 · 仰视（下上/剖面）实拍对比
+                    {t.photoDemoBtnSub}
                   </div>
                 </div>
               </button>
@@ -167,57 +195,57 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
                 color: '#f1f5f9',
               }}
             >
-              {profile.guide.tagline}
+              {guide.tagline}
             </div>
 
             <div className="guide-row-grid">
               <div className="guide-pill-box">
                 <div className="guide-pill-label">
-                  <Calendar size={12} color={profile.accentColor} /> 采摘时节
+                  <Calendar size={12} color={profile.accentColor} /> {t.guideSeasonPill}
                 </div>
-                <div className="guide-pill-value">{profile.seasonSummary}</div>
+                <div className="guide-pill-value">{seasonSummary}</div>
               </div>
               <div className="guide-pill-box">
                 <div className="guide-pill-label">
-                  <Mountain size={12} color={profile.accentColor} /> 典型海拔带
+                  <Mountain size={12} color={profile.accentColor} /> {t.guideElevPill}
                 </div>
-                <div className="guide-pill-value">{profile.elevSummary}</div>
+                <div className="guide-pill-value">{elevSummary}</div>
               </div>
             </div>
 
             <div className="guide-block">
               <div className="guide-block-title">
-                <Calendar size={13} color={profile.accentColor} /> 时节与气候规律
+                <Calendar size={13} color={profile.accentColor} /> {t.guideSeasonBlock}
               </div>
-              <p>{profile.guide.seasonDetail}</p>
+              <p>{guide.seasonDetail}</p>
             </div>
 
             <div className="guide-block">
               <div className="guide-block-title">
-                <Trees size={13} color="#4ade80" /> 生境、宿主与土壤
+                <Trees size={13} color="#4ade80" /> {t.guideHabitatBlock}
               </div>
-              <p>{profile.guide.habitat}</p>
+              <p>{guide.habitat}</p>
             </div>
 
             <div className="guide-block">
               <div className="guide-block-title">
-                <Compass size={13} color="#38bdf8" /> 地图选点攻略
+                <Compass size={13} color="#38bdf8" /> {t.guideMapTipsBlock}
               </div>
-              <p>{profile.guide.mapTips}</p>
+              <p>{guide.mapTips}</p>
             </div>
 
             <div className="guide-block">
               <div className="guide-block-title">
-                <Eye size={13} color="#facc15" /> 野外辨识要点
+                <Eye size={13} color="#facc15" /> {t.guideIdTraitsBlock}
               </div>
-              <p>{profile.guide.idTraits}</p>
+              <p>{guide.idTraits}</p>
             </div>
 
             <div className="guide-block warning">
               <div className="guide-block-title" style={{ color: '#fca5a5' }}>
-                <AlertTriangle size={13} color="#f87171" /> 毒菌混淆警示
+                <AlertTriangle size={13} color="#f87171" /> {t.guideSafetyBlock}
               </div>
-              <p style={{ color: '#fecaca' }}>{profile.guide.safetyWarning}</p>
+              <p style={{ color: '#fecaca' }}>{guide.safetyWarning}</p>
             </div>
           </div>
         ) : (
@@ -230,32 +258,37 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
                   className={`photo-angle-tab ${activeAngleIdx === idx ? 'active' : ''}`}
                   onClick={() => setActiveAngleIdx(idx)}
                 >
-                  {ph.angleShort}
+                  {lang === 'en' ? ph.angleShortEn : ph.angleShort}
                 </button>
               ))}
             </div>
 
             {/* Active Large Photo Card */}
-            {photos[activeAngleIdx] && (
+            {activePhoto && (
               <div className="photo-hero-card">
                 <div
                   className="photo-hero-img-wrap"
-                  onClick={() => setLightboxPhoto(photos[activeAngleIdx])}
-                  title="点击放大查看原图"
+                  onClick={() => setLightboxPhoto(activePhoto)}
+                  title={t.photoZoomHint}
                 >
                   <img
-                    src={photos[activeAngleIdx].src}
-                    alt={`${profile.shortName} - ${photos[activeAngleIdx].angleLabel}`}
+                    src={activePhoto.src}
+                    alt={`${shortName} - ${lang === 'en' ? activePhoto.angleLabelEn : activePhoto.angleLabel}`}
                   />
                   <span className="photo-zoom-hint">
-                    <ZoomIn size={12} /> 点击放大
+                    <ZoomIn size={12} /> {t.photoZoomHint}
                   </span>
                 </div>
                 <div className="photo-hero-meta">
-                  <div className="photo-hero-angle">{photos[activeAngleIdx].angleLabel}</div>
-                  <p className="photo-hero-caption">{photos[activeAngleIdx].caption}</p>
+                  <div className="photo-hero-angle">
+                    {lang === 'en' ? activePhoto.angleLabelEn : activePhoto.angleLabel}
+                  </div>
+                  <p className="photo-hero-caption">
+                    {lang === 'en' ? activePhoto.captionEn : activePhoto.caption}
+                  </p>
                   <div className="photo-hero-attr">
-                    离线实拍来源：{photos[activeAngleIdx].attribution}
+                    {t.photoSourcePrefix}
+                    {activePhoto.attribution}
                   </div>
                 </div>
               </div>
@@ -269,17 +302,17 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
                   className={`photo-strip-item ${activeAngleIdx === idx ? 'active' : ''}`}
                   onClick={() => setActiveAngleIdx(idx)}
                 >
-                  <img src={ph.src} alt={ph.angleShort} />
-                  <span>{ph.angleShort}</span>
+                  <img src={ph.src} alt={lang === 'en' ? ph.angleShortEn : ph.angleShort} />
+                  <span>{lang === 'en' ? ph.angleShortEn : ph.angleShort}</span>
                 </button>
               ))}
             </div>
 
             <div className="guide-block warning">
               <div className="guide-block-title" style={{ color: '#fca5a5' }}>
-                <AlertTriangle size={13} color="#f87171" /> 采食安全提醒
+                <AlertTriangle size={13} color="#f87171" /> {t.guidePhotoSafetyBlock}
               </div>
-              <p style={{ color: '#fecaca' }}>{profile.guide.safetyWarning}</p>
+              <p style={{ color: '#fecaca' }}>{guide.safetyWarning}</p>
             </div>
           </div>
         )}
@@ -292,14 +325,14 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
                 style={{ flex: 1, background: '#242e29', color: '#e2e8f0' }}
                 onClick={() => setShowPhotoDemo(false)}
               >
-                返回文字详解
+                {t.backToTextGuide}
               </button>
               <button
                 className="action-btn"
                 style={{ flex: 1.3, background: profile.accentColor, color: '#111513' }}
                 onClick={onClose}
               >
-                开始查看地图
+                {t.startMapBtn}
               </button>
             </div>
           ) : (
@@ -308,7 +341,7 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
               style={{ background: profile.accentColor, color: '#111513' }}
               onClick={onClose}
             >
-              知道了，开始查看地图
+              {t.gotItBtn}
             </button>
           )}
         </div>
@@ -332,11 +365,14 @@ export const SpeciesGuideModal: React.FC<SpeciesGuideModalProps> = ({
           </button>
           <img
             src={lightboxPhoto.src}
-            alt={lightboxPhoto.angleLabel}
+            alt={lang === 'en' ? lightboxPhoto.angleLabelEn : lightboxPhoto.angleLabel}
             onClick={(e) => e.stopPropagation()}
           />
           <div className="photo-lightbox-caption" onClick={(e) => e.stopPropagation()}>
-            <strong>{lightboxPhoto.angleLabel}</strong> · {lightboxPhoto.caption}
+            <strong>
+              {lang === 'en' ? lightboxPhoto.angleLabelEn : lightboxPhoto.angleLabel}
+            </strong>{' '}
+            · {lang === 'en' ? lightboxPhoto.captionEn : lightboxPhoto.caption}
           </div>
         </div>
       )}

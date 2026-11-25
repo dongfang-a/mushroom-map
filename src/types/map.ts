@@ -7,8 +7,28 @@ export type SpeciesId =
   | 'chanterelle'
   | 'matsutake'
   | 'porcini'
+  | 'fib-king'
+  | 'admirable'
   | 'leccinum'
   | 'morel';
+
+export type Lang = 'zh' | 'en';
+export type LangPref = 'auto' | 'zh' | 'en';
+export type UnitPreset = 'auto' | 'imperial' | 'metric' | 'custom';
+
+export interface UnitSettings {
+  elevation: 'ft' | 'm';
+  temperature: 'F' | 'C';
+  rain: 'in' | 'mm';
+  distance: 'mi' | 'km';
+  area: 'ac' | 'ha';
+}
+
+export interface AppPreferences {
+  langPref: LangPref;
+  unitPreset: UnitPreset;
+  units: UnitSettings;
+}
 
 export type BasemapId =
   | 'esri-imagery'
@@ -20,7 +40,9 @@ export type BasemapId =
 export interface BasemapDef {
   id: BasemapId;
   name: string;
+  nameEn: string;
   subtitle: string;
+  subtitleEn: string;
   tiles: string[];
   tileSize: number;
   maxzoom: number;
@@ -40,16 +62,20 @@ export type OverlayKind =
 
 export interface LegendItem {
   label: string;
+  labelEn?: string;
   color: string;
 }
 
 export interface OverlayDef {
   id: string;
   name: string;
+  nameEn: string;
   shortName: string;
+  shortNameEn: string;
   categoryId: string;
   kind: OverlayKind;
   description: string;
+  descriptionEn: string;
   defaultVisible: boolean;
   defaultOpacity: number;
   color: string;
@@ -64,6 +90,7 @@ export interface OverlayDef {
 export interface OverlayCategory {
   id: string;
   name: string;
+  nameEn: string;
   icon: string;
 }
 
@@ -101,10 +128,15 @@ export interface FireSummary {
 export interface PnwHotspot {
   id: string;
   name: string;
+  nameEn?: string;
   region: string;
+  regionEn: string;
   state: 'OR' | 'WA';
+  elevMinFt: number;
+  elevMaxFt: number;
   elevBand: string;
   habitat: string;
+  habitatEn: string;
   center: [number, number];
   zoom: number;
 }
@@ -137,6 +169,19 @@ export interface SoilInfo {
   matsutakeBadge: string | null;
 }
 
+export type LegalityRuleKey =
+  | 'prohibited'
+  | 'nps-rainier'
+  | 'nps-olympic'
+  | 'nps-north-cascades'
+  | 'usfs-wilderness'
+  | 'usfs'
+  | 'blm'
+  | 'state-forestry'
+  | 'nps-other'
+  | 'state-park'
+  | 'restricted-other';
+
 export interface ScoreFactorBreakdown {
   key: 'landcover' | 'elevation' | 'slope' | 'aspect' | 'canopy' | 'moisture';
   label: string;
@@ -159,6 +204,8 @@ export interface PointInspection {
   aspectDir: string | null;
   canopyPct: number | null;
   concavityM: number | null;
+  landCoverClass?: number | null;
+  metersPerPx?: number;
   landformLabel: string | null;
   activeSpeciesId: SpeciesId;
   activeScore: number | null;
@@ -176,6 +223,7 @@ export interface PointInspection {
   }>;
   publicAccess: {
     status: 'legal' | 'restricted' | 'prohibited';
+    ruleKey?: LegalityRuleKey;
     statusLabel: string;
     ruleHint: string;
     access: string;

@@ -1,4 +1,5 @@
 import type {
+  AppPreferences,
   BasemapId,
   ElevBandParams,
   ForageWaypoint,
@@ -8,6 +9,7 @@ import type {
 } from '../types/map';
 import { OVERLAYS } from '../data/mapSources';
 import { SPECIES_CATALOG } from '../data/speciesCatalog';
+import { detectSystemUnitSystem, IMPERIAL_UNITS, METRIC_UNITS } from '../utils/units';
 
 const KEYS = {
   speciesId: 'mm_species_id_v3',
@@ -20,9 +22,58 @@ const KEYS = {
   highContrast: 'mm_high_contrast_v1',
   waypoints: 'mm_waypoints_v1',
   viewport: 'mm_viewport_v3',
+  preferences: 'mm_preferences_v1',
 };
 
 const VALID_SPECIES = new Set<string>(SPECIES_CATALOG.map((s) => s.id));
+
+export function getDefaultPreferences(): AppPreferences {
+  const sys = detectSystemUnitSystem();
+  return {
+    langPref: 'auto',
+    unitPreset: 'auto',
+    units: sys === 'imperial' ? { ...IMPERIAL_UNITS } : { ...METRIC_UNITS },
+  };
+}
+
+export function loadPreferences(): AppPreferences {
+  const def = getDefaultPreferences();
+  try {
+    const raw = localStorage.getItem(KEYS.preferences);
+    if (!raw) return def;
+    const parsed = JSON.parse(raw) as Partial<AppPreferences>;
+    const langPref =
+      parsed.langPref === 'zh' || parsed.langPref === 'en' || parsed.langPref === 'auto'
+        ? parsed.langPref
+        : 'auto';
+    const unitPreset =
+      parsed.unitPreset === 'imperial' ||
+      parsed.unitPreset === 'metric' ||
+      parsed.unitPreset === 'custom' ||
+      parsed.unitPreset === 'auto'
+        ? parsed.unitPreset
+        : 'auto';
+    const u = parsed.units;
+    return {
+      langPref,
+      unitPreset,
+      units: {
+        elevation: u?.elevation === 'm' || u?.elevation === 'ft' ? u.elevation : def.units.elevation,
+        temperature:
+          u?.temperature === 'C' || u?.temperature === 'F' ? u.temperature : def.units.temperature,
+        rain: u?.rain === 'mm' || u?.rain === 'in' ? u.rain : def.units.rain,
+        distance: u?.distance === 'km' || u?.distance === 'mi' ? u.distance : def.units.distance,
+        area: u?.area === 'ha' || u?.area === 'ac' ? u.area : def.units.area,
+      },
+    };
+  } catch {
+    return def;
+  }
+}
+
+export function savePreferences(prefs: AppPreferences) {
+  localStorage.setItem(KEYS.preferences, JSON.stringify(prefs));
+}
 
 export function loadSpeciesId(): SpeciesId {
   const saved = localStorage.getItem(KEYS.speciesId);

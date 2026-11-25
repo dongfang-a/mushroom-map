@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Capacitor } from '@capacitor/core';
@@ -9,11 +9,16 @@ import {
   Camera,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Crosshair,
   Info,
   Layers,
+  Map as MapIcon,
   Palette,
+  Settings,
   ShieldCheck,
+  X,
   Zap,
 } from 'lucide-react';
 import {
@@ -25,8 +30,11 @@ import {
 import {
   getCurrentSeasonStatus,
   getSpeciesProfile,
+  getSpeciesSeasonSummary,
+  getSpeciesShortName,
   SPECIES_CATALOG,
 } from './data/speciesCatalog';
+import { resolveLang, UI_TEXT } from './i18n/translations';
 import {
   fetchPadusInBounds,
   fetchWildfiresByYear,
@@ -45,6 +53,7 @@ import {
   loadHighContrast,
   loadMushroomOpacity,
   loadOverlayStates,
+  loadPreferences,
   loadSpeciesId,
   loadSpeciesOverrides,
   loadViewport,
@@ -55,6 +64,7 @@ import {
   saveHighContrast,
   saveMushroomOpacity,
   saveOverlayStates,
+  savePreferences,
   saveSpeciesId,
   saveSpeciesOverrides,
   saveViewport,
@@ -73,20 +83,26 @@ import {
   setSpeciesOverrides,
 } from './services/tileEngines';
 import type {
+  AppPreferences,
   BasemapId,
   ElevBandParams,
   FireSummary,
   ForageWaypoint,
   InatObservation,
   InatTimeRange,
+  Lang,
+  LegalityRuleKey,
   OverlayRuntimeState,
   PnwHotspot,
   PointInspection,
   SpeciesId,
   SpeciesModelOverride,
+  UnitSettings,
 } from './types/map';
+import { formatAreaFromAcres, resolveUnits } from './utils/units';
 import { LayerDrawer } from './components/LayerDrawer';
 import { PointInspector } from './components/PointInspector';
+import { SettingsModal } from './components/SettingsModal';
 import { SpeciesGuideModal } from './components/SpeciesGuideModal';
 import { WaypointsSheet } from './components/WaypointsSheet';
 
@@ -120,6 +136,7 @@ function buildInitialStyle(basemapId: BasemapId): maplibregl.StyleSpecification 
 export const App: React.FC = () => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const scaleControlRef = useRef<maplibregl.ScaleControl | null>(null);
   const mapReadyRef = useRef(false);
   const tapMarkerRef = useRef<maplibregl.Marker | null>(null);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
@@ -137,12 +154,21 @@ export const App: React.FC = () => {
   const filterStrengthRef = useRef<number>(loadFilterStrength());
   const mushroomOpacityRef = useRef<number>(loadMushroomOpacity());
 
+  const [prefs, setPrefsState] = useState<AppPreferences>(loadPreferences);
+  const lang: Lang = resolveLang(prefs.langPref);
+  const units: UnitSettings = useMemo(() => resolveUnits(prefs), [prefs]);
+  const t = UI_TEXT[lang];
+  const langRef = useRef<Lang>(lang);
+  const unitsRef = useRef<UnitSettings>(units);
+
   const [speciesId, setSpeciesId] = useState<SpeciesId>(loadSpeciesId);
   const [speciesOverrides, setSpeciesOverridesState] = useState<
     Partial<Record<SpeciesId, SpeciesModelOverride>>
   >(loadSpeciesOverrides);
   const [speciesMenuOpen, setSpeciesMenuOpen] = useState(false);
   const [guideSpeciesId, setGuideSpeciesId] = useState<SpeciesId | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeHudCollapsed, setActiveHudCollapsed] = useState(false);
 
   const [basemapId, setBasemapId] = useState<BasemapId>(loadBasemap);
   const [mushroomOpacity, setMushroomOpacityState] = useState<number>(loadMushroomOpacity);
@@ -182,6 +208,7 @@ export const App: React.FC = () => {
   );
 
   const activeProfile = getSpeciesProfile(speciesId);
+  const activeBasemap = BASEMAPS.find((b) => b.id === basemapId) || BASEMAPS[0];
   const activeSpeciesParams: SpeciesModelOverride = {
     minElevFt: speciesOverrides[speciesId]?.minElevFt ?? activeProfile.defaults.minElevFt,
     maxElevFt: speciesOverrides[speciesId]?.maxElevFt ?? activeProfile.defaults.maxElevFt,
@@ -193,8 +220,26 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
+    langRef.current = lang;
+    unitsRef.current = units;
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    document.title = UI_TEXT[lang].pageTitle;
+  }, [lang, units]);
+
+  useEffect(() => {
+    if (scaleControlRef.current) {
+      scaleControlRef.current.setUnit(units.distance === 'km' ? 'metric' : 'imperial');
+    }
+  }, [units.distance]);
+
+  useEffect(() => {
     activeSpeciesIdRef.current = speciesId;
   }, [speciesId]);
+
+  const handleChangePrefs = useCallback((next: AppPreferences) => {
+    setPrefsState(next);
+    savePreferences(next);
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -255,11 +300,8 @@ export const App: React.FC = () => {
       setHighContrastPalette(next);
       saveHighContrast(next);
       setSpeciesRev((r) => r + 1);
-      showToast(
-        next
-          ? '已开启高反差热成像色阶（全底图高对比）'
-          : '已切换回菌种经典配色（保留 1px 深色描边）',
-      );
+      const tx = UI_TEXT[langRef.current];
+      showToast(next ? tx.toastContrastOn : tx.toastContrastOff);
       return next;
     });
   }, [showToast]);
@@ -267,9 +309,8 @@ export const App: React.FC = () => {
   const handleToggleBlink = useCallback(() => {
     setBlinkEnabled((prev) => {
       const next = !prev;
-      showToast(
-        next ? '⚡ 已开启 1Hz 闪烁对比（透视底图等高线/林道）' : '已关闭 1Hz 闪烁对比',
-      );
+      const tx = UI_TEXT[langRef.current];
+      showToast(next ? tx.toastBlinkOn : tx.toastBlinkOff);
       return next;
     });
   }, [showToast]);
@@ -316,7 +357,6 @@ export const App: React.FC = () => {
     setGuideSpeciesId(nextId);
     setSpeciesRev((r) => r + 1);
 
-    // Toggle preset companion overlays cleanly (turn off other species-specific heavy layers)
     const managedPresetIds = [
       'wildfires-2025',
       'wildfires-2024',
@@ -500,6 +540,12 @@ export const App: React.FC = () => {
       dragRotate: false,
     });
 
+    const scaleCtrl = new maplibregl.ScaleControl({
+      maxWidth: 96,
+      unit: unitsRef.current.distance === 'km' ? 'metric' : 'imperial',
+    });
+    scaleControlRef.current = scaleCtrl;
+    map.addControl(scaleCtrl, 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
     map.on('load', () => {
@@ -570,19 +616,23 @@ export const App: React.FC = () => {
           const code = String(p.Pub_Access || '');
           const accessLabel =
             code === 'OA'
-              ? '开放访问 (Open)'
+              ? 'Open'
               : code === 'RA'
-                ? '受限访问 (Restricted)'
+                ? 'Restricted'
                 : code === 'XA'
-                  ? '禁止进入 (Closed)'
+                  ? 'Closed'
                   : code;
           const status =
             p.foraging_status === 'prohibited' || p.foraging_status === 'restricted'
               ? p.foraging_status
               : 'legal';
+          const ruleKey = p.foraging_rule_key
+            ? (String(p.foraging_rule_key) as LegalityRuleKey)
+            : undefined;
           publicAccess = {
             status,
-            statusLabel: String(p.foraging_label || '公共土地'),
+            ruleKey,
+            statusLabel: String(p.foraging_label || 'Public Land'),
             ruleHint: String(p.foraging_rule || ''),
             access: accessLabel,
             unitName: String(p.Unit_Nm || ''),
@@ -633,6 +683,8 @@ export const App: React.FC = () => {
         renderedFires,
         publicAccess,
         filterStrengthRef.current,
+        langRef.current,
+        unitsRef.current,
       );
       setInspection({ ...full, inatSighting: tappedInat });
     });
@@ -641,6 +693,7 @@ export const App: React.FC = () => {
 
     return () => {
       mapReadyRef.current = false;
+      scaleControlRef.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -674,7 +727,8 @@ export const App: React.FC = () => {
         nextBottomLayerId,
       );
       map.triggerRepaint();
-      showToast(`已切换底图：${bm.name}`);
+      const bmName = langRef.current === 'en' ? bm.nameEn : bm.name;
+      showToast(UI_TEXT[langRef.current].toastBasemapSwitched(bmName));
     },
     [showToast],
   );
@@ -837,7 +891,8 @@ export const App: React.FC = () => {
                 refreshActiveWildfiresIndex(overlayStates);
               })
               .catch(() => {
-                showToast(`${ov.shortName} 加载失败，请检查网络`);
+                const nm = langRef.current === 'en' ? ov.shortNameEn : ov.shortName;
+                showToast(UI_TEXT[langRef.current].toastOverlayLoadFail(nm));
               })
               .finally(() => setFiresLoading(false));
           } else {
@@ -1036,11 +1091,8 @@ export const App: React.FC = () => {
         if (id === 'padus-access') {
           setLegalMaskEnabled(nextVisible);
           setSpeciesRev((r) => r + 1);
-          showToast(
-            nextVisible
-              ? '合法林地 AND 过滤已开启：仅显示合法林地内蘑菇地图'
-              : '合法林地过滤已关闭：显示全区域蘑菇地图',
-          );
+          const tx = UI_TEXT[langRef.current];
+          showToast(nextVisible ? tx.toastLegalOn : tx.toastLegalOff);
         }
         return {
           ...prev,
@@ -1050,6 +1102,27 @@ export const App: React.FC = () => {
       if (id.startsWith('wildfires-')) {
         setSpeciesRev((r) => r + 1);
       }
+    },
+    [showToast],
+  );
+
+  const handleQuickHideOverlay = useCallback(
+    (id: string, displayLabel: string) => {
+      setOverlayStates((prev) => {
+        if (!prev[id]?.visible) return prev;
+        if (id === 'padus-access') {
+          setLegalMaskEnabled(false);
+          setSpeciesRev((r) => r + 1);
+        }
+        return {
+          ...prev,
+          [id]: { ...prev[id], visible: false },
+        };
+      });
+      if (id.startsWith('wildfires-')) {
+        setSpeciesRev((r) => r + 1);
+      }
+      showToast(UI_TEXT[langRef.current].toastOverlayHidden(displayLabel));
     },
     [showToast],
   );
@@ -1074,7 +1147,8 @@ export const App: React.FC = () => {
         zoom: fire.acres > 25000 ? 10.5 : 11.8,
         duration: 1100,
       });
-      showToast(`已定位至 ${fire.name} (${fire.year} · ${fire.acres.toLocaleString()} ac)`);
+      const areaStr = formatAreaFromAcres(fire.acres, unitsRef.current, langRef.current);
+      showToast(UI_TEXT[langRef.current].toastFlewFire(fire.name, fire.year, areaStr));
     },
     [showToast],
   );
@@ -1084,7 +1158,8 @@ export const App: React.FC = () => {
       const map = mapRef.current;
       if (!map) return;
       map.flyTo({ center: spot.center, zoom: spot.zoom, duration: 1100 });
-      showToast(`已定位至：${spot.name}`);
+      const spotName = langRef.current === 'en' && spot.nameEn ? spot.nameEn : spot.name;
+      showToast(UI_TEXT[langRef.current].toastFlewSpot(spotName));
     },
     [showToast],
   );
@@ -1131,9 +1206,11 @@ export const App: React.FC = () => {
         [],
         null,
         filterStrengthRef.current,
+        langRef.current,
+        unitsRef.current,
       );
       setInspection({ ...full, inatSighting: obs });
-      showToast(`iNat 实拍点：${obs.placeGuess} (${obs.observedOn})`);
+      showToast(UI_TEXT[langRef.current].toastFlewInat(obs.placeGuess, obs.observedOn));
     },
     [showToast],
   );
@@ -1141,13 +1218,14 @@ export const App: React.FC = () => {
   const handleLocateMe = useCallback(async () => {
     const map = mapRef.current;
     if (!map) return;
+    const tx = UI_TEXT[langRef.current];
     try {
       let lat: number;
       let lng: number;
       if (Capacitor.isNativePlatform()) {
         const perm = await Geolocation.requestPermissions();
         if (perm.location !== 'granted') {
-          showToast('请在系统设置中授予定位权限');
+          showToast(tx.toastGpsDenied);
           return;
         }
         const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
@@ -1180,9 +1258,9 @@ export const App: React.FC = () => {
       }
 
       map.flyTo({ center: [lng, lat], zoom: 12.5, duration: 900 });
-      showToast('已定位至当前位置');
+      showToast(tx.toastGpsLocated);
     } catch {
-      showToast('无法获取当前 GPS 位置');
+      showToast(tx.toastGpsFailed);
     }
   }, [showToast]);
 
@@ -1197,7 +1275,7 @@ export const App: React.FC = () => {
       setWaypoints(next);
       saveWaypoints(next);
       syncWaypointsOnMap(next);
-      showToast(`已保存采菇点位：${created.name}`);
+      showToast(UI_TEXT[langRef.current].toastWaypointSaved(created.name));
     },
     [waypoints, syncWaypointsOnMap, showToast],
   );
@@ -1215,25 +1293,49 @@ export const App: React.FC = () => {
   const speciesMapVisible = !!overlayStates['species-probability']?.visible;
   const legalZonesVisible = !!overlayStates['padus-access']?.visible;
   const activeLegendItems = highContrast ? HIGH_CONTRAST_LEGENDS : activeProfile.legends;
-  const activeSeason = getCurrentSeasonStatus(activeProfile.peakMonths);
+  const activeSeason = getCurrentSeasonStatus(activeProfile.peakMonths, lang);
+  const activeSpeciesShort = getSpeciesShortName(activeProfile, lang);
+
+  // Active overlay chips for the persistent "Why is the map colorful?" HUD indicator
+  const activeOverlayChips = useMemo(() => {
+    return OVERLAYS.filter((ov) => overlayStates[ov.id]?.visible).map((ov) => {
+      if (ov.id === 'species-probability') {
+        return {
+          id: ov.id,
+          label: `${activeProfile.emoji} ${activeSpeciesShort}`,
+          color: highContrast ? '#ff3b30' : activeProfile.accentColor,
+        };
+      }
+      return {
+        id: ov.id,
+        label: lang === 'en' ? ov.shortNameEn : ov.shortName,
+        color: ov.color,
+      };
+    });
+  }, [overlayStates, activeProfile, activeSpeciesShort, highContrast, lang]);
+
   const groupedSpecies = (
     [
       {
         tone: 'peak' as const,
-        title: `✅ 当前当季（${new Date().getMonth() + 1} 月盛产）`,
-        items: SPECIES_CATALOG.filter((sp) => getCurrentSeasonStatus(sp.peakMonths).tone === 'peak'),
+        title: t.seasonPeakGroup(new Date().getMonth() + 1),
+        items: SPECIES_CATALOG.filter(
+          (sp) => getCurrentSeasonStatus(sp.peakMonths, lang).tone === 'peak',
+        ),
       },
       {
         tone: 'shoulder' as const,
-        title: '⏳ 季初 · 尾声（临近窗口）',
+        title: t.seasonShoulderGroup,
         items: SPECIES_CATALOG.filter(
-          (sp) => getCurrentSeasonStatus(sp.peakMonths).tone === 'shoulder',
+          (sp) => getCurrentSeasonStatus(sp.peakMonths, lang).tone === 'shoulder',
         ),
       },
       {
         tone: 'off' as const,
-        title: '⛔ 非当季（仅适合提前踩点）',
-        items: SPECIES_CATALOG.filter((sp) => getCurrentSeasonStatus(sp.peakMonths).tone === 'off'),
+        title: t.seasonOffGroup,
+        items: SPECIES_CATALOG.filter(
+          (sp) => getCurrentSeasonStatus(sp.peakMonths, lang).tone === 'off',
+        ),
       },
     ]
   ).filter((g) => g.items.length > 0);
@@ -1245,7 +1347,6 @@ export const App: React.FC = () => {
       {/* Fixed Screen Center Green Crosshair (non-interactive) */}
       <div className="center-crosshair" aria-hidden="true">
         <svg viewBox="0 0 28 28" width="28" height="28">
-          {/* Dark outer stroke for contrast on white Topo & dark Satellite */}
           <path
             d="M14 2 V10 M14 18 V26 M2 14 H10 M18 14 H26"
             stroke="#060a08"
@@ -1253,7 +1354,6 @@ export const App: React.FC = () => {
             strokeLinecap="round"
           />
           <circle cx="14" cy="14" r="1.9" fill="#060a08" />
-          {/* Crisp bright green crosshair */}
           <path
             d="M14 2 V10 M14 18 V26 M2 14 H10 M18 14 H26"
             stroke="#22c55e"
@@ -1284,8 +1384,10 @@ export const App: React.FC = () => {
               aria-label="Select mushroom species"
             >
               <span>{activeProfile.emoji}</span>
-              <span>{activeProfile.shortName}</span>
-              {activeSeason.tone === 'off' && <span className="hud-off-badge">非当季</span>}
+              <span>{activeSpeciesShort}</span>
+              {activeSeason.tone === 'off' && (
+                <span className="hud-off-badge">{t.offSeasonBadge}</span>
+              )}
               <ChevronDown
                 size={14}
                 color={activeSeason.tone === 'off' ? '#fca5a5' : activeProfile.accentColor}
@@ -1298,10 +1400,12 @@ export const App: React.FC = () => {
                   <div key={group.tone} className={`species-group group-${group.tone}`}>
                     <div className={`species-group-header tone-${group.tone}`}>
                       <span>{group.title}</span>
-                      <span className="species-group-count">{group.items.length} 种</span>
+                      <span className="species-group-count">
+                        {t.speciesCountUnit(group.items.length)}
+                      </span>
                     </div>
                     {group.items.map((sp) => {
-                      const st = getCurrentSeasonStatus(sp.peakMonths);
+                      const st = getCurrentSeasonStatus(sp.peakMonths, lang);
                       const isSel = sp.id === speciesId;
                       return (
                         <button
@@ -1321,13 +1425,18 @@ export const App: React.FC = () => {
                                   gap: 6,
                                 }}
                               >
-                                <span>{sp.shortName}</span>
+                                <span>{getSpeciesShortName(sp, lang)}</span>
                                 <span className={`season-pill-strong tone-${st.tone}`}>
-                                  {st.tone === 'peak' ? '当季盛产' : st.tone === 'off' ? '⛔ 非当季' : '⏳ 尾声'}
+                                  {st.tone === 'peak'
+                                    ? t.seasonPeakChip
+                                    : st.tone === 'off'
+                                      ? t.seasonOffChip
+                                      : t.seasonShoulderChip}
                                 </span>
                               </div>
                               <div style={{ fontSize: 10.5, color: '#9aa9a0', marginTop: 2 }}>
-                                {sp.seasonSummary} · {sp.englishName}
+                                {getSpeciesSeasonSummary(sp, lang)} ·{' '}
+                                {lang === 'en' ? sp.scientificName : sp.englishName}
                               </div>
                             </div>
                           </div>
@@ -1345,10 +1454,79 @@ export const App: React.FC = () => {
             className={`chip-btn ${legalZonesVisible ? 'active' : ''}`}
             onClick={() => handleToggleOverlay('padus-access')}
           >
-            <ShieldCheck size={13} /> 合法林地
+            <ShieldCheck size={13} /> {t.legalLandBtn}
           </button>
         </div>
       </header>
+
+      {/* Active Map & Enabled Overlays HUD Strip — explains every active color layer at a glance */}
+      <div
+        className={`active-layers-hud ${activeHudCollapsed ? 'collapsed' : ''}`}
+        aria-label="Active basemap and overlays"
+      >
+        <button
+          className="active-basemap-pill"
+          onClick={() => {
+            setDrawerTab('basemaps');
+            setDrawerOpen(true);
+          }}
+          title={t.activeLayersOpenDrawer}
+        >
+          <MapIcon size={11} color="#38bdf8" />
+          <span>{lang === 'en' ? activeBasemap.nameEn : activeBasemap.name}</span>
+          {activeHudCollapsed && (
+            <span className="active-count-badge">
+              {activeOverlayChips.length > 0
+                ? t.activeLayersCount(activeOverlayChips.length)
+                : t.activeLayersNone}
+            </span>
+          )}
+        </button>
+
+        {!activeHudCollapsed && (
+          <div className="active-overlays-scroll">
+            {activeOverlayChips.length === 0 ? (
+              <span className="active-none-label">{t.activeLayersNone}</span>
+            ) : (
+              activeOverlayChips.map((chip) => (
+                <span className="active-layer-pill" key={chip.id}>
+                  <button
+                    className="active-layer-main"
+                    onClick={() => {
+                      setDrawerTab('layers');
+                      setDrawerOpen(true);
+                    }}
+                    title={t.activeLayersOpenDrawer}
+                  >
+                    <span className="active-layer-dot" style={{ background: chip.color }} />
+                    <span>{chip.label}</span>
+                  </button>
+                  <button
+                    className="active-layer-x"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleQuickHideOverlay(chip.id, chip.label);
+                    }}
+                    aria-label={t.activeLayersDisableTip(chip.label)}
+                    title={t.activeLayersDisableTip(chip.label)}
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))
+            )}
+          </div>
+        )}
+
+        <button
+          className="active-hud-toggle"
+          onClick={() => setActiveHudCollapsed((v) => !v)}
+          aria-label={activeHudCollapsed ? t.activeLayersExpand : t.activeLayersCollapse}
+          title={activeHudCollapsed ? t.activeLayersExpand : t.activeLayersCollapse}
+        >
+          {activeHudCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
+        </button>
+      </div>
 
       {/* Right floating action buttons */}
       <div className="fab-column">
@@ -1391,6 +1569,15 @@ export const App: React.FC = () => {
           <Bookmark size={20} color="#54e36c" />
           {waypoints.length > 0 && <span className="fab-badge">{waypoints.length}</span>}
         </button>
+
+        <button
+          className="fab-btn"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Language and units settings"
+          title={t.settingsTitle}
+        >
+          <Settings size={20} color="#38bdf8" />
+        </button>
       </div>
 
       {/* Compact Active Species Legend + Global Mushroom Opacity Slider + Guide Button */}
@@ -1398,9 +1585,11 @@ export const App: React.FC = () => {
         <div className="floating-legend">
           <div className="legend-title">
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-              {activeProfile.emoji} {activeProfile.shortName}
-              {activeSeason.tone === 'off' && <span className="hud-off-badge">非当季</span>}
-              {legalZonesVisible ? ' · 仅合法区' : ''}
+              {activeProfile.emoji} {activeSpeciesShort}
+              {activeSeason.tone === 'off' && (
+                <span className="hud-off-badge">{t.offSeasonBadge}</span>
+              )}
+              {legalZonesVisible ? t.legendLegalSuffix : ''}
             </span>
             <button
               onClick={() => setGuideSpeciesId(speciesId)}
@@ -1418,7 +1607,7 @@ export const App: React.FC = () => {
               }}
               aria-label="Show species guide"
             >
-              <Info size={12} /> 特色
+              <Info size={12} /> {t.legendGuideBtn}
             </button>
           </div>
           <div className="legend-bar">
@@ -1427,13 +1616,25 @@ export const App: React.FC = () => {
             ))}
           </div>
           <div className="legend-labels">
-            <span>{activeLegendItems[0].label}</span>
-            <span>{activeLegendItems[2].label}</span>
-            <span>{activeLegendItems[4].label}</span>
+            <span>
+              {lang === 'en' && activeLegendItems[0].labelEn
+                ? activeLegendItems[0].labelEn
+                : activeLegendItems[0].label}
+            </span>
+            <span>
+              {lang === 'en' && activeLegendItems[2].labelEn
+                ? activeLegendItems[2].labelEn
+                : activeLegendItems[2].label}
+            </span>
+            <span>
+              {lang === 'en' && activeLegendItems[4].labelEn
+                ? activeLegendItems[4].labelEn
+                : activeLegendItems[4].label}
+            </span>
           </div>
 
           <div className="global-opacity-row">
-            <span>蘑菇透明度</span>
+            <span>{t.legendOpacity}</span>
             <input
               type="range"
               min={0}
@@ -1449,7 +1650,7 @@ export const App: React.FC = () => {
           </div>
 
           <div className="global-opacity-row" style={{ marginTop: 5, paddingTop: 5 }}>
-            <span>筛选强度</span>
+            <span>{t.legendStrength}</span>
             <input
               type="range"
               min={0}
@@ -1471,7 +1672,7 @@ export const App: React.FC = () => {
               aria-label="Toggle 1Hz heatmap blink"
             >
               <Zap size={11} />
-              {blinkEnabled ? '1Hz 闪烁中' : '1Hz 闪烁'}
+              {blinkEnabled ? t.legendBlinkOn : t.legendBlinkOff}
             </button>
             <button
               className={`legend-mini-btn ${highContrast ? 'contrast-on' : ''}`}
@@ -1479,7 +1680,7 @@ export const App: React.FC = () => {
               aria-label="Toggle high contrast palette"
             >
               <Palette size={11} />
-              {highContrast ? '高反差色' : '经典菌色'}
+              {highContrast ? t.legendContrastOn : t.legendContrastOff}
             </button>
           </div>
 
@@ -1504,7 +1705,7 @@ export const App: React.FC = () => {
                   background: 'rgba(16, 185, 129, 0.55)',
                 }}
               />
-              仅显示合法采摘区 (AND 过滤)
+              {t.legendLegalNote}
             </div>
           )}
         </div>
@@ -1512,9 +1713,20 @@ export const App: React.FC = () => {
 
       {toast && <div className="toast">{toast}</div>}
 
+      {/* Settings Modal (Language & Measurement Units) */}
+      <SettingsModal
+        open={settingsOpen}
+        prefs={prefs}
+        lang={lang}
+        onChangePrefs={handleChangePrefs}
+        onClose={() => setSettingsOpen(false)}
+      />
+
       {/* Species Characteristics & Season Popup Modal */}
       <SpeciesGuideModal
         profile={guideSpeciesId ? getSpeciesProfile(guideSpeciesId) : null}
+        lang={lang}
+        units={units}
         onClose={() => setGuideSpeciesId(null)}
       />
 
@@ -1522,6 +1734,8 @@ export const App: React.FC = () => {
         open={drawerOpen}
         initialTab={drawerTab}
         speciesId={speciesId}
+        lang={lang}
+        units={units}
         onClose={() => setDrawerOpen(false)}
         basemapId={basemapId}
         onSelectBasemap={handleSelectBasemap}
@@ -1560,10 +1774,12 @@ export const App: React.FC = () => {
         open={waypointsOpen}
         waypoints={waypoints}
         mapCenter={mapCenter}
+        lang={lang}
+        units={units}
         onClose={() => setWaypointsOpen(false)}
         onFlyTo={(wp) => {
           mapRef.current?.flyTo({ center: [wp.lng, wp.lat], zoom: 13.5, duration: 900 });
-          showToast(`已定位至：${wp.name}`);
+          showToast(t.toastFlewSpot(wp.name));
         }}
         onDelete={handleDeleteWaypoint}
       />
@@ -1571,6 +1787,8 @@ export const App: React.FC = () => {
       <PointInspector
         data={inspection}
         speciesId={speciesId}
+        lang={lang}
+        units={units}
         onClose={() => {
           setInspection(null);
           tapMarkerRef.current?.remove();
@@ -1578,7 +1796,7 @@ export const App: React.FC = () => {
         }}
         onCopyCoords={(text) => {
           navigator.clipboard?.writeText(text).catch(() => {});
-          showToast(`已复制坐标：${text}`);
+          showToast(t.toastCoordsCopied(text));
         }}
         onSaveWaypoint={handleSaveWaypoint}
       />

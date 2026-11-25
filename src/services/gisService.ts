@@ -1,5 +1,15 @@
-import type { FireSummary, PointInspection, SoilInfo, SpeciesId } from '../types/map';
+import type {
+  FireSummary,
+  Lang,
+  LegalityRuleKey,
+  PointInspection,
+  SoilInfo,
+  SpeciesId,
+  UnitSettings,
+} from '../types/map';
 import { WESTERN_FORAGING_STATES } from '../data/mapSources';
+import { localizeLegality } from '../i18n/translations';
+import { IMPERIAL_UNITS } from '../utils/units';
 import {
   degreesToCompass,
   type IndexedFirePolygon,
@@ -221,12 +231,14 @@ export async function fetchWildfiresByYear(year: number): Promise<WildfireYearDa
 
 export interface ForagingLegality {
   status: 'legal' | 'restricted' | 'prohibited';
+  ruleKey: LegalityRuleKey;
   statusLabel: string;
   ruleHint: string;
 }
 
 export function classifyForagingLegality(
   props: Record<string, unknown>,
+  lang: Lang = 'zh',
 ): ForagingLegality {
   const pubAccess = String(props.Pub_Access || '').toUpperCase();
   const mngName = String(props.MngNm_Desc || '');
@@ -235,6 +247,14 @@ export function classifyForagingLegality(
   const unitName = String(props.Unit_Nm || '');
 
   const combined = `${mngName} ${mngType} ${desType} ${unitName}`.toLowerCase();
+
+  const build = (
+    status: ForagingLegality['status'],
+    ruleKey: LegalityRuleKey,
+  ): ForagingLegality => {
+    const loc = localizeLegality(ruleKey, lang);
+    return { status, ruleKey, ...loc };
+  };
 
   // 1. Explicitly prohibited / closed / municipal watersheds / sensitive preserves / tribal / private NGO
   if (
@@ -255,32 +275,20 @@ export function classifyForagingLegality(
     combined.includes('american indian') ||
     combined.includes('native american')
   ) {
-    return {
-      status: 'prohibited',
-      statusLabel: '禁止采摘 / 保护禁区',
-      ruleHint: '饮用水源保护区、科研样地、自然保护区、保护地役权、部落领地或关闭区禁止采摘野生菌',
-    };
+    return build('prohibited', 'prohibited');
   }
 
   // 1b. Specific PNW National Parks (including their interior NPS Wilderness Areas)
   // with explicit 36 CFR 2.1(c) personal mushroom foraging allowances
   const isNps = mngName.toLowerCase().includes('national park service');
   if (isNps && (combined.includes('mount rainier') || combined.includes('mt. rainier'))) {
-    return {
-      status: 'legal',
-      statusLabel: '允许限量自用采摘 (Mount Rainier 国家公园)',
-      ruleHint: '36 CFR 2.1(c) 特批：每人每日限 1 加仑个人自用，禁止商用，Paradise/Sunrise 等敏感区严禁离道',
-    };
+    return build('legal', 'nps-rainier');
   }
   if (
     isNps &&
     (combined.includes('olympic national park') || combined.includes('daniel j. evans wilderness'))
   ) {
-    return {
-      status: 'legal',
-      statusLabel: '允许限量自用采摘 (Olympic 国家公园)',
-      ruleHint: '36 CFR 2.1(c) 特批：每人每日限 1 夸脱（与浆果共享总量），自然步道 200 ft 内禁采',
-    };
+    return build('legal', 'nps-olympic');
   }
   if (
     isNps &&
@@ -289,11 +297,7 @@ export function classifyForagingLegality(
       combined.includes('ross lake') ||
       combined.includes('lake chelan'))
   ) {
-    return {
-      status: 'legal',
-      statusLabel: '允许限量自用采摘 (North Cascades 国家公园)',
-      ruleHint: '36 CFR 2.1(c) 特批：每人每日限 1 夸脱个人自用，须用刀切勿连根拔起',
-    };
+    return build('legal', 'nps-north-cascades');
   }
 
   // 2. Prime legal public foraging lands in PNW: USFS National Forests, BLM, State Forests / DNR
@@ -307,27 +311,15 @@ export function classifyForagingLegality(
 
   if (isUsfs) {
     if (desType.toLowerCase().includes('wilderness')) {
-      return {
-        status: 'legal',
-        statusLabel: '允许个人自用采摘 (USFS 荒野区)',
-        ruleHint: '美国国家森林荒野区通常允许少量个人自用采摘（禁机动车辆，部分森林需免费/付费许可）',
-      };
+      return build('legal', 'usfs-wilderness');
     }
     if (pubAccess === 'OA') {
-      return {
-        status: 'legal',
-        statusLabel: '允许个人自用采摘 (USFS 国家森林)',
-        ruleHint: 'USFS 国家森林普遍允许个人自用采菇（通常每日 1–2 加仑，出发前建议确认当地是否需免费许可）',
-      };
+      return build('legal', 'usfs');
     }
   }
 
   if (isBlm && pubAccess === 'OA') {
-    return {
-      status: 'legal',
-      statusLabel: '允许个人自用采摘 (BLM 公共土地)',
-      ruleHint: 'BLM 公共林地通常允许少量个人自用采摘（商用须申请许可）',
-    };
+    return build('legal', 'blm');
   }
 
   if (
@@ -336,35 +328,19 @@ export function classifyForagingLegality(
     !desType.toLowerCase().includes('conservation') &&
     !desType.toLowerCase().includes('park')
   ) {
-    return {
-      status: 'legal',
-      statusLabel: '允许个人自用采摘 (州立森林 / DNR)',
-      ruleHint: 'OR 州立森林（如 Tillamook）与 WA DNR 州立林地普遍允许个人自用采菇（WA 通常需 Discover Pass 停车证）',
-    };
+    return build('legal', 'state-forestry');
   }
 
   // 3. Restricted / check local park rules (National Parks, State Parks, County Parks, RA)
   if (mngName.toLowerCase().includes('national park service') || desType.toLowerCase().includes('national park')) {
-    return {
-      status: 'restricted',
-      statusLabel: '严格限量 / 国家公园规定',
-      ruleHint: '部分国家公园（如 Olympic / Mt. Rainier）限个人每日 1 夸脱，部分公园完全禁止，务必核查公园条例',
-    };
+    return build('restricted', 'nps-other');
   }
 
   if (desType.toLowerCase().includes('state park') || mngName.toLowerCase().includes('state park')) {
-    return {
-      status: 'restricted',
-      statusLabel: '受限 / 州立公园规则',
-      ruleHint: '部分 OR/WA 州立公园允许少量自用，但部分公园或保护单元禁止采摘，请查看园方告示',
-    };
+    return build('restricted', 'state-park');
   }
 
-  return {
-    status: 'restricted',
-    statusLabel: '受限公共区域 / 需核查规定',
-    ruleHint: '市县公园、保护绿地或受限访问区请先确认当地是否允许采摘野生菌',
-  };
+  return build('restricted', 'restricted-other');
 }
 
 export interface PadusViewportResult {
@@ -432,6 +408,7 @@ export async function fetchPadusInBounds(
       properties: {
         ...props,
         foraging_status: legal.status,
+        foraging_rule_key: legal.ruleKey,
         foraging_label: legal.statusLabel,
         foraging_rule: legal.ruleHint,
       },
@@ -626,9 +603,11 @@ export async function inspectPointDetails(
   fires: PointInspection['fires'],
   publicAccess: PointInspection['publicAccess'],
   filterStrengthPct = 50,
+  lang: Lang = 'zh',
+  units: UnitSettings = IMPERIAL_UNITS,
 ): Promise<PointInspection> {
   const [localTerrain, usgsElevM, weather, soil] = await Promise.all([
-    sampleLocalTerrainAtLngLat(lng, lat, speciesId),
+    sampleLocalTerrainAtLngLat(lng, lat, speciesId, lang, units),
     fetchUsgs3DepIdentify(lng, lat),
     fetchOpenMeteoPoint(lng, lat),
     fetchUsdaSoilAtPoint(lng, lat, filterStrengthPct),
@@ -649,10 +628,12 @@ export async function inspectPointDetails(
     aspectDeg: localTerrain?.aspectDeg ?? null,
     aspectDir:
       localTerrain?.aspectDeg !== undefined
-        ? degreesToCompass(localTerrain.aspectDeg)
+        ? degreesToCompass(localTerrain.aspectDeg, lang)
         : null,
     canopyPct: localTerrain?.canopyPct ?? null,
     concavityM: localTerrain?.concavityM ?? null,
+    landCoverClass: localTerrain?.landCoverClass ?? null,
+    metersPerPx: localTerrain?.metersPerPx ?? 26,
     landformLabel: localTerrain?.landformLabel ?? null,
     activeSpeciesId: speciesId,
     activeScore: localTerrain?.activeScore ?? null,

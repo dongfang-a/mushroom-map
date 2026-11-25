@@ -1,3 +1,6 @@
+import type { UnitSettings } from '../types/map';
+import { formatDistanceFromMiles, IMPERIAL_UNITS } from './units';
+
 const EARTH_RADIUS_MILES = 3958.7613;
 
 export function haversineMiles(
@@ -19,14 +22,9 @@ export function haversineMiles(
   return EARTH_RADIUS_MILES * c;
 }
 
-export function formatDistanceFromCenter(miles: number): string {
-  const km = miles * 1.609344;
-  if (miles < 0.5) {
-    const meters = Math.round(km * 1000);
-    return `${miles.toFixed(2)} mi (${meters} m)`;
-  }
-  if (miles < 100) {
-    return `${miles.toFixed(1)} mi (${km.toFixed(1)} km)`;
-  }
-  return `${Math.round(miles)} mi (${Math.round(km)} km)`;
+export function formatDistanceFromCenter(
+  miles: number,
+  units: UnitSettings = IMPERIAL_UNITS,
+): string {
+  return formatDistanceFromMiles(miles, units);
 }

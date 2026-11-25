@@ -2,11 +2,19 @@ import maplibregl from 'maplibre-gl';
 import { getSpeciesProfile, type SpeciesProfile } from '../data/speciesCatalog';
 import type {
   ElevBandParams,
+  Lang,
   LegendItem,
   ScoreFactorBreakdown,
   SpeciesId,
   SpeciesModelOverride,
+  UnitSettings,
 } from '../types/map';
+import {
+  formatElevation,
+  formatElevationRange,
+  formatSmallMeters,
+  IMPERIAL_UNITS,
+} from '../utils/units';
 
 export const HIGH_CONTRAST_PALETTE: Array<[number, number, number, number]> = [
   [6, 182, 212, 165],   // Electric Cyan
@@ -17,11 +25,11 @@ export const HIGH_CONTRAST_PALETTE: Array<[number, number, number, number]> = [
 ];
 
 export const HIGH_CONTRAST_LEGENDS: LegendItem[] = [
-  { label: '低', color: '#06b6d4' },
-  { label: '中低', color: '#8b5cf6' },
-  { label: '中等', color: '#d946ef' },
-  { label: '中高', color: '#ff3b30' },
-  { label: '极高 · 黄金点', color: '#ffe600' },
+  { label: '低', labelEn: 'Low', color: '#06b6d4' },
+  { label: '中低', labelEn: 'Mod-Low', color: '#8b5cf6' },
+  { label: '中等', labelEn: 'Moderate', color: '#d946ef' },
+  { label: '中高', labelEn: 'Mod-High', color: '#ff3b30' },
+  { label: '极高 · 黄金点', labelEn: 'Prime · Hotspot', color: '#ffe600' },
 ];
 
 const ORIGIN_SHIFT = 20037508.342789244;
@@ -509,7 +517,13 @@ function computeLocalConcavityM(dem: Float32Array, px: number, py: number): numb
   return ringAvg - center;
 }
 
-export function concavityToLandform(concavityM: number): string {
+export function concavityToLandform(concavityM: number, lang: Lang = 'zh'): string {
+  if (lang === 'en') {
+    if (concavityM >= 1.8) return 'Moist Draw / Hollow (High Retention)';
+    if (concavityM >= 0.4) return 'Slight Bench / Swale (Good Moisture)';
+    if (concavityM >= -0.8) return 'Gentle Slope (Balanced Drainage)';
+    return 'Convex Ridge / Spur (Fast-Draining)';
+  }
   if (concavityM >= 1.8) return '湿润沟谷/凹坡 (极佳保水)';
   if (concavityM >= 0.4) return '微凹林台 (保水良好)';
   if (concavityM >= -0.8) return '平缓坡面 (排水适中)';
@@ -526,6 +540,8 @@ export function computeSpeciesScore(
   metersPerPx = 26,
   landCoverClass: number | null = null,
   includeBreakdown = false,
+  lang: Lang = 'zh',
+  units: UnitSettings = IMPERIAL_UNITS,
 ): { score: number; tier: string; breakdown?: ScoreFactorBreakdown[] } {
   const profile: SpeciesProfile = getSpeciesProfile(speciesId);
   const params = resolveEffectiveParams(speciesId);
@@ -640,19 +656,19 @@ export function computeSpeciesScore(
   let tier: string;
   if (elevFt <= 10) {
     score = 0;
-    tier = '水域/滩涂';
+    tier = lang === 'en' ? 'Water / Tidal Flat' : '水域/滩涂';
   } else if (!lcAllowed) {
     score = 0;
-    tier = '城镇/非林地';
+    tier = lang === 'en' ? 'Urban / Non-Forest' : '城镇/非林地';
   } else if (elevOutHard) {
     score = 8;
-    tier = '超出海拔带';
+    tier = lang === 'en' ? 'Outside Elevation Band' : '超出海拔带';
   } else if (canopyOutHard) {
     score = Math.round((canopyPct ?? 0) * 0.35);
-    tier = '非目标林区';
+    tier = lang === 'en' ? 'Non-Target Canopy' : '非目标林区';
   } else if (slopeOutHard) {
     score = 12;
-    tier = '过陡峭壁';
+    tier = lang === 'en' ? 'Too Steep / Cliff' : '过陡峭壁';
   } else {
     let linear: number;
     if (canopyPct !== null) {
@@ -680,7 +696,7 @@ export function computeSpeciesScore(
     );
     const gateExp = 0.08 + s * 0.28;
     let gated = linear * Math.pow(Math.max(0.05, limitingFactor), gateExp);
-    // Deciduous / riparian hardwood affinity bonus for Leccinum (Birch / Aspen / Madrone) & Oyster
+    // Deciduous / riparian hardwood affinity bonus for Leccinum (Birch / Aspen / Madrone)
     if (speciesId === 'leccinum' && landCoverClass === LC_DECIDUOUS_RIPARIAN) {
       gated = Math.min(1.0, gated * 1.12);
     }
@@ -688,127 +704,148 @@ export function computeSpeciesScore(
     score = Math.max(0, Math.min(100, Math.round(gated * 100)));
     const thr = params.minScoreThreshold;
     tier =
-      score >= thr + 22
-        ? '极高 · 黄金生境 (Prime)'
-        : score >= thr + 16
-          ? '中高 (Mod-High)'
-          : score >= thr + 10
-            ? '中等 (Moderate)'
-            : score >= thr + 5
-              ? '中低 (Mod-Low)'
-              : score >= thr
-                ? '低 (Low)'
-                : '不适宜';
+      lang === 'en'
+        ? score >= thr + 22
+          ? 'Prime · Hotspot'
+          : score >= thr + 16
+            ? 'Mod-High'
+            : score >= thr + 10
+              ? 'Moderate'
+              : score >= thr + 5
+                ? 'Mod-Low'
+                : score >= thr
+                  ? 'Low'
+                  : 'Unsuitable'
+        : score >= thr + 22
+          ? '极高 · 黄金生境 (Prime)'
+          : score >= thr + 16
+            ? '中高 (Mod-High)'
+            : score >= thr + 10
+              ? '中等 (Moderate)'
+              : score >= thr + 5
+                ? '中低 (Mod-Low)'
+                : score >= thr
+                  ? '低 (Low)'
+                  : '不适宜';
   }
 
   if (!includeBreakdown) return { score, tier };
 
+  const en = lang === 'en';
   const lcName =
     landCoverClass === LC_CONIFER_MIXED
-      ? '针叶/混交林'
+      ? en ? 'Conifer / Mixed Forest' : '针叶/混交林'
       : landCoverClass === LC_DECIDUOUS_RIPARIAN
-        ? '阔叶/溪岸林'
+        ? en ? 'Deciduous / Riparian' : '阔叶/溪岸林'
         : landCoverClass === LC_SHRUB
-          ? '灌丛/迹地'
+          ? en ? 'Shrub / Scrub' : '灌丛/迹地'
           : landCoverClass === LC_NON_FOREST
-            ? '城镇/非林地'
-            : '林地未覆';
+            ? en ? 'Urban / Non-Forest' : '城镇/非林地'
+            : en ? 'Unclassified' : '林地未覆';
 
   const idealAspectLabel =
     w.aspectPref === 'north'
-      ? '偏北阴坡 (N/NE/NW)'
+      ? en ? 'Cool North (N/NE/NW)' : '偏北阴坡 (N/NE/NW)'
       : w.aspectPref === 'warm'
-        ? '暖阳林缘 (E/SE/S/SW)'
-        : '各坡向皆宜 (微偏北)';
+        ? en ? 'Warm Edge (E/SE/S/SW)' : '暖阳林缘 (E/SE/S/SW)'
+        : en ? 'Any Aspect (Slight N)' : '各坡向皆宜 (微偏北)';
 
   const idealCanopyLabel =
     speciesId === 'matsutake' || speciesId === 'porcini' || speciesId === 'leccinum'
       ? speciesId === 'leccinum'
-        ? '40%–75% 透光阔叶/林缘'
-        : '45%–78% 半开阔针叶'
-      : `≥ ${params.minCanopyPct}% 郁闭`;
+        ? en ? '40–75% Hardwood Edge' : '40%–75% 透光阔叶/林缘'
+        : en ? '45–78% Semi-Open Conifer' : '45%–78% 半开阔针叶'
+      : en
+        ? `≥ ${params.minCanopyPct}% Canopy`
+        : `≥ ${params.minCanopyPct}% 郁闭`;
 
   const idealMoistureLabel =
     w.moistureMode === 'concave'
-      ? '湿润凹坡/沟谷 (≥+0.5m)'
+      ? en
+        ? `Moist Hollow (≥ ${formatSmallMeters(0.5, units, true)})`
+        : `湿润凹坡/沟谷 (≥${formatSmallMeters(0.5, units, true)})`
       : w.moistureMode === 'well-drained'
-        ? '凸坡/强排水台地 (≤-0.4m)'
-        : '平缓微凹台地 (-0.8~+1.5m)';
+        ? en
+          ? `Drained Ridge (≤ ${formatSmallMeters(-0.4, units, true)})`
+          : `凸坡/强排水台地 (≤${formatSmallMeters(-0.4, units, true)})`
+        : en
+          ? `Gentle Bench (${formatSmallMeters(-0.8, units, true)}..${formatSmallMeters(1.5, units, true)})`
+          : `平缓微凹台地 (${formatSmallMeters(-0.8, units, true)}~${formatSmallMeters(1.5, units, true)})`;
 
   const breakdown: ScoreFactorBreakdown[] = [
     {
       key: 'landcover',
-      label: '地类',
+      label: en ? 'Land' : '地类',
       actual: lcName,
       ideal:
         speciesId === 'morel'
-          ? '自然林地 / 过火灌丛'
+          ? en ? 'Forest / Burn Scrub' : '自然林地 / 过火灌丛'
           : speciesId === 'leccinum'
-            ? '阔叶/混交林（白桦/颤杨/熊果）'
-            : '自然林地（非城镇）',
+            ? en ? 'Hardwood / Mixed (Birch/Aspen)' : '阔叶/混交林（白桦/颤杨/熊果）'
+            : en ? 'Natural Forest' : '自然林地（非城镇）',
       status: !lcAllowed ? 'penalty' : 'bonus',
       summary: !lcAllowed
-        ? '城镇/水域/非林地（硬排除）'
+        ? en ? 'Urban / water / non-forest (excluded)' : '城镇/水域/非林地（硬排除）'
         : speciesId === 'leccinum' && landCoverClass === LC_DECIDUOUS_RIPARIAN
-          ? '阔叶/溪岸宿主林强加分'
-          : '自然森林地类达标',
+          ? en ? 'Hardwood / riparian host bonus' : '阔叶/溪岸宿主林强加分'
+          : en ? 'Natural forest class OK' : '自然森林地类达标',
       hardGate: !lcAllowed,
     },
     {
       key: 'elevation',
-      label: '海拔',
-      actual: `${Math.round(elevFt).toLocaleString()} ft`,
-      ideal: `${params.minElevFt.toLocaleString()}–${params.maxElevFt.toLocaleString()} ft`,
+      label: en ? 'Elev' : '海拔',
+      actual: formatElevation(elevFt, units),
+      ideal: formatElevationRange(params.minElevFt, params.maxElevFt, units),
       status: elevOutHard || elevScore < 0.55 ? 'penalty' : elevScore >= 0.85 ? 'bonus' : 'neutral',
       summary: elevOutHard
         ? elevFt < params.minElevFt
-          ? '海拔过低（超出适宜带）'
-          : '海拔过高（超出适宜带）'
+          ? en ? 'Too low (outside target band)' : '海拔过低（超出适宜带）'
+          : en ? 'Too high (outside target band)' : '海拔过高（超出适宜带）'
         : elevScore >= 0.85
-          ? '位于核心黄金海拔带'
+          ? en ? 'Inside core prime elevation band' : '位于核心黄金海拔带'
           : elevScore >= 0.55
-            ? '位于海拔带边缘'
+            ? en ? 'Near edge of elevation band' : '位于海拔带边缘'
             : elevFt < params.minElevFt
-              ? '偏低于理想海拔'
-              : '偏高于理想海拔',
+              ? en ? 'Below preferred elevation' : '偏低于理想海拔'
+              : en ? 'Above preferred elevation' : '偏高于理想海拔',
       hardGate: elevOutHard,
     },
     {
       key: 'slope',
-      label: '坡度',
+      label: en ? 'Slope' : '坡度',
       actual: `${slopePct.toFixed(1)}%`,
       ideal: `≤ ${idealMax}%`,
       status: slopeOutHard || slopeScore < 0.45 ? 'penalty' : slopeScore >= 0.78 ? 'bonus' : 'neutral',
       summary: slopeOutHard
-        ? `坡度过陡 >${idealMax + 20}%（峭壁硬排除）`
+        ? en ? `Too steep >${idealMax + 20}% (excluded)` : `坡度过陡 >${idealMax + 20}%（峭壁硬排除）`
         : slopeScore >= 0.78
-          ? '缓至中坡理想易出菇'
+          ? en ? 'Gentle–moderate slope ideal' : '缓至中坡理想易出菇'
           : slopeScore >= 0.45
-            ? '坡度略偏陡'
-            : '坡度过陡不利保水与采摘',
+            ? en ? 'Slightly steep slope' : '坡度略偏陡'
+            : en ? 'Steep & fast-drying slope' : '坡度过陡不利保水与采摘',
       hardGate: slopeOutHard,
     },
     {
       key: 'aspect',
-      label: '坡向',
-      actual: `${degreesToCompass(aspectDeg).split(' ')[0]} ${Math.round(aspectDeg)}°`,
+      label: en ? 'Aspect' : '坡向',
+      actual: `${degreesToCompass(aspectDeg, lang).split(' ')[0]} ${Math.round(aspectDeg)}°`,
       ideal: idealAspectLabel,
       status: aspectScore >= 0.72 ? 'bonus' : aspectScore >= 0.42 ? 'neutral' : 'penalty',
       summary:
         aspectScore >= 0.72
           ? w.aspectPref === 'warm'
-            ? '光照温暖林缘加分'
-            : '阴凉保水坡向加分'
+            ? en ? 'Warm sunlit edge bonus' : '光照温暖林缘加分'
+            : en ? 'Cool moisture-holding aspect bonus' : '阴凉保水坡向加分'
           : aspectScore >= 0.42
-            ? '坡向表现一般'
+            ? en ? 'Neutral slope aspect' : '坡向表现一般'
             : w.aspectPref === 'warm'
-              ? '偏阴凉光照不足'
-              : '阳坡直晒偏干减分',
+              ? en ? 'Shadier & cooler than preferred' : '偏阴凉光照不足'
+              : en ? 'Sun-exposed dry aspect penalty' : '阳坡直晒偏干减分',
     },
     {
       key: 'canopy',
-      label: '树冠',
-      actual: canopyPct !== null ? `${canopyPct}%` : '未知',
+      label: en ? 'Canopy' : '树冠',
+      actual: canopyPct !== null ? `${canopyPct}%` : en ? 'N/A' : '未知',
       ideal: idealCanopyLabel,
       status:
         canopyPct === null
@@ -820,32 +857,34 @@ export function computeSpeciesScore(
               : 'neutral',
       summary:
         canopyPct === null
-          ? '暂无 NLCD 树冠数据'
+          ? en ? 'No NLCD canopy data' : '暂无 NLCD 树冠数据'
           : canopyOutHard
-            ? '树冠过疏/开阔空地（硬排除）'
+            ? en ? 'Too open / sparse canopy (excluded)' : '树冠过疏/开阔空地（硬排除）'
             : canopyScore >= 0.72
-              ? '树冠郁闭度理想'
+              ? en ? 'Ideal tree canopy cover' : '树冠郁闭度理想'
               : canopyPct < params.minCanopyPct
-                ? `树冠偏疏（低于偏好 ${params.minCanopyPct}%）`
-                : '林冠偏密/透光略差',
+                ? en
+                  ? `Slightly sparse (< ${params.minCanopyPct}%)`
+                  : `树冠偏疏（低于偏好 ${params.minCanopyPct}%）`
+                : en ? 'Dense canopy / lower light' : '林冠偏密/透光略差',
       hardGate: canopyOutHard,
     },
     {
       key: 'moisture',
-      label: '微地形',
-      actual: `${concavityM >= 0 ? '+' : ''}${concavityM.toFixed(1)}m`,
+      label: en ? 'Terrain' : '微地形',
+      actual: formatSmallMeters(concavityM, units, true),
       ideal: idealMoistureLabel,
       status: moistureScore >= 0.72 ? 'bonus' : moistureScore >= 0.42 ? 'neutral' : 'penalty',
       summary:
         moistureScore >= 0.72
           ? w.moistureMode === 'well-drained'
-            ? '强排水凸坡台地加分'
-            : '凹坡汇水保水加分'
+            ? en ? 'Fast-draining ridge/bench bonus' : '强排水凸坡台地加分'
+            : en ? 'Moisture-collecting hollow bonus' : '凹坡汇水保水加分'
           : moistureScore >= 0.42
-            ? '平缓微地形一般'
+            ? en ? 'Moderate micro-topography' : '平缓微地形一般'
             : w.moistureMode === 'well-drained'
-              ? '低洼偏湿不利松茸'
-              : '凸坡偏干缺乏汇水',
+              ? en ? 'Too wet/depressed for Matsutake' : '低洼偏湿不利松茸'
+              : en ? 'Dry convex ridge penalty' : '凸坡偏干缺乏汇水',
     },
   ];
 
@@ -1104,15 +1143,19 @@ export function registerCustomTileProtocols() {
   });
 }
 
-export function degreesToCompass(deg: number): string {
-  const dirs = ['N (北)', 'NE (东北)', 'E (东)', 'SE (东南)', 'S (南)', 'SW (西南)', 'W (西)', 'NW (西北)'];
-  return dirs[Math.round((deg % 360) / 45) % 8];
+export function degreesToCompass(deg: number, lang: Lang = 'zh'): string {
+  const dirsZh = ['N (北)', 'NE (东北)', 'E (东)', 'SE (东南)', 'S (南)', 'SW (西南)', 'W (西)', 'NW (西北)'];
+  const dirsEn = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const idx = Math.round((deg % 360) / 45) % 8;
+  return lang === 'en' ? dirsEn[idx] : dirsZh[idx];
 }
 
 export async function sampleLocalTerrainAtLngLat(
   lng: number,
   lat: number,
   speciesId: SpeciesId,
+  lang: Lang = 'zh',
+  units: UnitSettings = IMPERIAL_UNITS,
 ) {
   const z = 12;
   const n = Math.pow(2, z);
@@ -1173,6 +1216,8 @@ export async function sampleLocalTerrainAtLngLat(
     metersPerPx,
     lcClass,
     true,
+    lang,
+    units,
   );
 
   return {
@@ -1181,10 +1226,12 @@ export async function sampleLocalTerrainAtLngLat(
     slopeDeg: Number(slopeDeg.toFixed(1)),
     slopePct: Number(slopePct.toFixed(1)),
     aspectDeg: Math.round(aspectDeg),
-    aspectDir: degreesToCompass(aspectDeg),
+    aspectDir: degreesToCompass(aspectDeg, lang),
     canopyPct,
     concavityM,
-    landformLabel: concavityToLandform(concavityM),
+    landCoverClass: lcClass,
+    metersPerPx,
+    landformLabel: concavityToLandform(concavityM, lang),
     activeScore: scored.score,
     activeTier: scored.tier,
     scoreBreakdown: scored.breakdown || [],
