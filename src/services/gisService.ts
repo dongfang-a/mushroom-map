@@ -347,6 +347,12 @@ export interface PadusViewportResult {
   geojson: GeoJSON.FeatureCollection;
   legalPolygons: IndexedFirePolygon[];
   prohibitedPolygons: IndexedFirePolygon[];
+  paddedBounds: [number, number, number, number];
+  tolerance: string;
+}
+
+export function getPadusToleranceForZoom(zoom: number): string {
+  return zoom >= 12 ? '0.0002' : zoom >= 10 ? '0.0006' : '0.0018';
 }
 
 export async function fetchPadusInBounds(
@@ -354,31 +360,43 @@ export async function fetchPadusInBounds(
   zoom: number,
   signal?: AbortSignal,
 ): Promise<PadusViewportResult> {
-  // Pad viewport bounds by 25% so edge tiles have complete legal polygon masks while panning
+  // Pad viewport bounds by 45% so brisk pans already have complete legal polygon masks preloaded
   const [w, s, e, n] = bounds;
-  const padLng = Math.min(0.6, (e - w) * 0.25);
-  const padLat = Math.min(0.4, (n - s) * 0.25);
+  const padLng = Math.min(0.9, (e - w) * 0.45);
+  const padLat = Math.min(0.6, (n - s) * 0.45);
+  const paddedBounds: [number, number, number, number] = [
+    w - padLng,
+    s - padLat,
+    e + padLng,
+    n + padLat,
+  ];
   const geometry = JSON.stringify({
-    xmin: w - padLng,
-    ymin: s - padLat,
-    xmax: e + padLng,
-    ymax: n + padLat,
+    xmin: paddedBounds[0],
+    ymin: paddedBounds[1],
+    xmax: paddedBounds[2],
+    ymax: paddedBounds[3],
     spatialReference: { wkid: 4326 },
   });
 
-  const tolerance = zoom >= 12 ? '0.0002' : zoom >= 10 ? '0.0006' : '0.0018';
+  const tolerance = getPadusToleranceForZoom(zoom);
 
+  // Filter server-side to Federal/State/Joint lands + large closed areas & municipal watersheds,
+  // ordered largest-first (GIS_Acres DESC) so tiny suburban city parks can NEVER truncate National/State Forests!
   const params = new URLSearchParams({
-    where: "Pub_Access IN ('OA','RA','XA')",
+    where:
+      "(Pub_Access IN ('OA','RA','XA') AND MngTp_Desc IN ('Federal','State','Joint')) " +
+      "OR (Pub_Access = 'XA' AND GIS_Acres >= 20) " +
+      "OR (Unit_Nm LIKE '%Watershed%' AND GIS_Acres >= 50)",
     geometry,
     geometryType: 'esriGeometryEnvelope',
     inSR: '4326',
     spatialRel: 'esriSpatialRelIntersects',
-    outFields: 'OBJECTID,Pub_Access,Unit_Nm,MngTp_Desc,MngNm_Desc,DesTp_Desc',
+    outFields: 'OBJECTID,Pub_Access,Unit_Nm,MngTp_Desc,MngNm_Desc,DesTp_Desc,GIS_Acres',
+    orderByFields: 'GIS_Acres DESC',
     outSR: '4326',
     maxAllowableOffset: tolerance,
     geometryPrecision: '4',
-    resultRecordCount: '400',
+    resultRecordCount: '1500',
     f: 'geojson',
   });
 
@@ -419,6 +437,8 @@ export async function fetchPadusInBounds(
     geojson: { type: 'FeatureCollection', features },
     legalPolygons,
     prohibitedPolygons,
+    paddedBounds,
+    tolerance,
   };
 }
 

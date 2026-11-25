@@ -39,6 +39,7 @@ import { resolveLang, UI_TEXT } from './i18n/translations';
 import {
   fetchPadusInBounds,
   fetchWildfiresByYear,
+  getPadusToleranceForZoom,
   inspectPointDetails,
   type WildfireYearData,
 } from './services/gisService';
@@ -154,6 +155,10 @@ export const App: React.FC = () => {
   const padusAbortRef = useRef<AbortController | null>(null);
   const padusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const padusSigRef = useRef<string>('');
+  const padusCoveredRef = useRef<{
+    bounds: [number, number, number, number];
+    tolerance: string;
+  } | null>(null);
   const inatAbortRef = useRef<AbortController | null>(null);
   const inatItemsRef = useRef<InatObservation[]>([]);
   const wildfireDataMapRef = useRef<Map<number, WildfireYearData>>(new Map());
@@ -557,7 +562,25 @@ export const App: React.FC = () => {
       const map = mapRef.current;
       if (!map || !mapReadyRef.current) return;
       if (!overlayStates['padus-access']?.visible) return;
-      if (map.getZoom() < 7) return;
+      const zoom = map.getZoom();
+      if (zoom < 7) return;
+
+      // Skip redundant refetch if the viewport is still comfortably inside the 45% preloaded PAD-US buffer
+      if (!immediate && padusCoveredRef.current) {
+        const b = map.getBounds();
+        const [cw, cs, ce, cn] = padusCoveredRef.current.bounds;
+        const tol = getPadusToleranceForZoom(zoom);
+        const margin = 0.01;
+        if (
+          tol === padusCoveredRef.current.tolerance &&
+          b.getWest() >= cw + margin &&
+          b.getSouth() >= cs + margin &&
+          b.getEast() <= ce - margin &&
+          b.getNorth() <= cn - margin
+        ) {
+          return;
+        }
+      }
 
       if (padusTimerRef.current) clearTimeout(padusTimerRef.current);
 
@@ -576,8 +599,13 @@ export const App: React.FC = () => {
           const src = map.getSource('padus-access') as maplibregl.GeoJSONSource | undefined;
           if (src) src.setData(res.geojson);
 
+          padusCoveredRef.current = {
+            bounds: res.paddedBounds,
+            tolerance: res.tolerance,
+          };
           setActiveLegalPolygons(res.legalPolygons, res.prohibitedPolygons);
-          const sig = `${res.legalPolygons.length}:${res.prohibitedPolygons.length}:${Math.round(b.getCenter().lng * 20)},${Math.round(b.getCenter().lat * 20)}`;
+          const boxKey = res.paddedBounds.map((v) => Math.round(v * 50)).join(',');
+          const sig = `${res.legalPolygons.length}:${res.prohibitedPolygons.length}:${res.tolerance}:${boxKey}`;
           if (sig !== padusSigRef.current) {
             padusSigRef.current = sig;
             setSpeciesRev((r) => r + 1);
@@ -590,7 +618,7 @@ export const App: React.FC = () => {
       if (immediate) {
         run();
       } else {
-        padusTimerRef.current = setTimeout(run, 320);
+        padusTimerRef.current = setTimeout(run, 260);
       }
     },
     [overlayStates],
