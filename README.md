@@ -10,18 +10,19 @@ A **100% static client-side, zero-token, installable PWA** mushroom foraging and
 
 ## Key Features
 
-- **12 PNW Edible Mushroom Species — Live Habitat Suitability Engine**
-  - Covers: **Winter Chanterelle / Yellowfoot** (*Craterellus tubaeformis*), **Hedgehog** (*Hydnum oregonense / umbilicatum*), **Black Trumpet** (*Craterellus calicornucopioides*), **Oyster** (*Pleurotus pulmonarius / ostreatus*), **Bear's Head Tooth** (*Hericium abietis*), **Pacific Golden & White Chanterelle** (*Cantharellus formosus / subalbidus*), **Western Matsutake** (*Tricholoma murrillianum*), **King Bolete / Porcini** (*Boletus edulis / rex-veris*), **Fib King** (*Boletus fibrillosus*), **Admirable Bolete** (*Aureoboletus mirabilis*), **Leccinum / Scaber Stalk** (*Leccinum spp.*), and **Burn Morel** (*Morchella spp.*).
+- **13 PNW Edible Mushroom Species — Live Habitat Suitability Engine**
+  - Covers: **Winter Chanterelle / Yellowfoot** (*Craterellus tubaeformis*), **Hedgehog** (*Hydnum oregonense / umbilicatum*), **Black Trumpet** (*Craterellus calicornucopioides*), **Oyster** (*Pleurotus pulmonarius / ostreatus*), **Bear's Head Tooth** (*Hericium abietis*), **Pacific Golden & White Chanterelle** (*Cantharellus formosus / subalbidus*), **Western Matsutake** (*Tricholoma murrillianum*), **King Bolete / Porcini** (*Boletus edulis / rex-veris*), **Fib King** (*Boletus fibrillosus*), **Admirable Bolete** (*Aureoboletus mirabilis*), **Hawk's Wing / Shingled Hedgehog** (*Sarcodon imbricatus*), **Leccinum / Scaber Stalk** (*Leccinum spp.*), and **Burn Morel** (*Morchella spp.*).
   - Synthesizes elevation, slope, aspect, micro-topographic concavity (TPI), NLCD 30m tree canopy, NLCD 2021 land-cover water/urban masking, DEM hydro-flattened lake protection, and legal public land polygons directly in the browser via MapLibre custom tile protocols.
-- **Bilingual UI (English / Chinese) & Configurable Units (⚙️ Settings)**
+- **Bilingual UI (English / Chinese), Configurable Units & App Shortcut (⚙️ Settings)**
   - Automatically follows your OS/browser language (`Follow System`) or switches manually between **English** and **简体中文**.
   - Supports **Follow System / Imperial (US) / Metric (SI)** presets plus independent overrides for **Elevation (`ft` / `m`)**, **Temperature (`°F` / `°C`)**, **Precipitation (`in` / `mm`)**, **Distance & Map Scale (`mi` / `km`)**, and **Burn Area (`ac` / `ha`)**.
+  - Built-in **Create Desktop / Home Screen Icon** control triggers the native PWA install prompt on Chrome/Edge or shows tailored iOS Safari / in-app browser steps.
 - **Active Map & Overlays HUD Strip**
   - Always displays the active basemap and every enabled overlay with color dots and one-tap `×` dismissal so you immediately know what every colored layer on the map represents.
 - **High-Contrast Controls & Legal Land AND Mask**
   - Opacity & global selectivity (`0%–100%`) sliders, `1Hz` opacity blink toggle, high-contrast radar palette with `1px` dark outline, and one-tap **Legal Land** (`USGS PAD-US`) AND filtering.
 - **Seasonal Grouping & Offline 3-Angle Field Guides**
-  - Automatically groups species by the current month (**Peak Season / Shoulder / Off-Season**) with a 12-month fruiting calendar, lookalike warnings, and **36 bundled offline 3-angle reference photos** (top, side, underside/cross-section).
+  - Automatically groups species by the current month (**Peak Season / Shoulder / Off-Season**) with a 12-month fruiting calendar, lookalike warnings, and **39 bundled offline 3-angle reference photos** (top, side, underside/cross-section).
 - **6-Factor Tap-to-Inspect Diagnostics & Waypoints**
   - Tap anywhere on the map to inspect real-time elevation, slope, aspect, canopy, micro-topography, USDA NRCS SSURGO soil texture/drainage, Open-Meteo 24h/7d rainfall & soil temperature, wildfire history, and public land legality — and save personal waypoints locally.
 

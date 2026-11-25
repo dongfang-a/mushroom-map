@@ -393,6 +393,44 @@ export const SPECIES_DEMO_PHOTOS: Record<SpeciesId, SpeciesPhotoItem[]> = {
       attribution: 'iNaturalist · @geographerdave (CC-BY)',
     },
   ],
+  'hawks-wing': [
+    {
+      angle: 'top',
+      angleLabel: '俯视（同心粗大翘鳞 · 鹰翼/虎掌质感）',
+      angleLabelEn: 'Top View (Coarse Upturned Scales)',
+      angleShort: '俯视 · 翘鳞盖',
+      angleShortEn: 'Top · Scales',
+      src: './species-photos/hawks-wing/top.jpg',
+      caption: '100% 标志性外观：棕褐色宽大菌盖布满同心排列、向上翘起的粗大黑褐瓦片状鳞片，如鹰羽与虎掌。',
+      captionEn:
+        '100% unmistakable top: broad brown cap layered with coarse, upturned dark concentric scales like hawk feathers.',
+      attribution: 'iNaturalist · @mitchvandyke (CC-BY)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（翘鳞轮廓与盖缘密布灰褐齿刺）',
+      angleLabelEn: 'Side View (Scaly Profile & Rim Teeth)',
+      angleShort: '侧面 · 株型',
+      angleShortEn: 'Side · Profile',
+      src: './species-photos/hawks-wing/side.jpg',
+      caption: '侧面同时可见中央微凹的翘鳞菌盖与盖缘下垂的细密褐色齿刺；建议专挑年轻肥嫩、鳞片紧实的个体。',
+      captionEn:
+        'Profile clearly displays both the sunken scaly cap surface and hanging brownish teeth along the rim; pick young firm fruitbodies.',
+      attribution: 'iNaturalist · @michellejprice (CC-BY)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视（密布灰褐脆齿刺 · 顺延至柄）',
+      angleLabelEn: 'Underside (Decurrent Gray-Brown Teeth)',
+      angleShort: '仰视 · 齿刺',
+      angleShortEn: 'Underside · Teeth',
+      src: './species-photos/hawks-wing/underside.jpg',
+      caption: '盖下完全无菌褶无海绵孔，密布易脱落的灰褐/淡棕色软齿刺并向下延生至菌柄（核对柄基部无蓝绿斑以避开极苦近缘种）。',
+      captionEn:
+        'Underside bears crowded fragile grayish-brown spines running down the upper stem (check that stem base lacks greenish-blue staining of bitter S. scabrosus).',
+      attribution: 'iNaturalist · @jensu (CC0)',
+    },
+  ],
   leccinum: [
     {
       angle: 'top',

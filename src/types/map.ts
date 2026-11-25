@@ -9,6 +9,7 @@ export type SpeciesId =
   | 'porcini'
   | 'fib-king'
   | 'admirable'
+  | 'hawks-wing'
   | 'leccinum'
   | 'morel';
 

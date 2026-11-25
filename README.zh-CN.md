@@ -10,18 +10,19 @@
 
 ## 核心功能
 
-- **12 种 PNW 热门野生食用菌实时生境推演**
-  - 覆盖：冬鸡油菌（Yellowfoot）、刺猬菌（Hedgehog）、黑喇叭菌（Black Trumpet）、野生平菇（Oyster）、熊头猴头菇（Bear's Head Tooth）、黄金/白鸡油菌（Chanterelle）、美洲松茸（Matsutake）、美味牛肝菌（Porcini / King Bolete）、**绒盖牛肝菌（Fib King / *Boletus fibrillosus*）**、**丽柄牛肝菌（Admirable Bolete / *Aureoboletus mirabilis*）**、疣柄牛肝菌（Leccinum）与火烧羊肚菌（Burn Morel）。
+- **13 种 PNW 热门野生食用菌实时生境推演**
+  - 覆盖：冬鸡油菌（Yellowfoot）、刺猬菌（Hedgehog）、黑喇叭菌（Black Trumpet）、野生平菇（Oyster）、熊头猴头菇（Bear's Head Tooth）、黄金/白鸡油菌（Chanterelle）、美洲松茸（Matsutake）、美味牛肝菌（Porcini / King Bolete）、绒盖牛肝菌（Fib King / *Boletus fibrillosus*）、丽柄牛肝菌（Admirable Bolete / *Aureoboletus mirabilis*）、**虎掌菌（Hawk's Wing / *Sarcodon imbricatus*）**、疣柄牛肝菌（Leccinum）与火烧羊肚菌（Burn Morel）。
   - 基于浏览器端 Canvas 实时合成地形高程、坡度、坡向、地形凹凸度（TPI）、树冠郁闭度（NLCD TCC）、地类掩膜（NLCD 2021 Land Cover，自动剔除水体与城镇）、DEM 水文整平湖面保护及合法林地边界。
-- **中英文双语与自由度量衡（⚙️ 设置齿轮）**
+- **中英文双语、自由度量衡与桌面图标创建（⚙️ 设置齿轮）**
   - 默认跟随浏览器/系统语言（`跟随系统`），可随时手动切换 **简体中文** 或 **English**。
   - 支持 **跟随系统 / 英制（US）/ 公制（SI）** 一键预设，并可逐项自定义：**海拔（`ft` / `m`）**、**温度（`°F` / `°C`）**、**降雨量（`in` / `mm`）**、**距离与地图比例尺（`mi` / `km`）**、**火场面积（`ac` / `ha`）**。
+  - 内置 **「创建桌面 / 主屏幕图标」** 入口：Chrome/Edge 自动调起原生 PWA 安装弹窗，iOS Safari 与微信内置浏览器自动展示分步指引。
 - **画面常驻「当前有效地图与叠加图层」提示条**
   - 实时显示当前底图和每一个已开启的叠加图层及对应色点，支持一键 `×` 关闭任意叠加层，再也不会疑惑地图为什么花花绿绿。
 - **全局筛选控制与合法林地 AND 过滤**
   - 菌种透明度、筛选强度（0%–100%）、`1Hz` 闪烁对比、高反差雷达色带与轮廓描边，以及一键 **合法林地**（USGS PAD-US）AND 过滤。
 - **当季智能分组与离线 3 角度辨识图鉴**
-  - 按当前月份自动分为「当季 / 季初·尾声 / 非当季」，内置 12 个月出菇日历与 **36 张（12 种 × 3 视角）离线实拍参考图**及有毒混淆种警示。
+  - 按当前月份自动分为「当季 / 季初·尾声 / 非当季」，内置 12 个月出菇日历与 **39 张（13 种 × 3 视角）离线实拍参考图**及有毒混淆种警示。
 - **点选 6 因子深度诊断与本地航点**
   - 单击地图即可查询该点实时海拔、坡度坡向、树冠郁闭度、微地形、USDA NRCS 土壤质地与排水性、Open-Meteo 24h/7d 降雨与土温、PAD-US 公共林地合法性及火烧历史，并支持保存个人采菇点位。
 

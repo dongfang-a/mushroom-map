@@ -798,6 +798,82 @@ export const SPECIES_CATALOG: SpeciesProfile[] = [
     },
   },
   {
+    id: 'hawks-wing',
+    name: '虎掌菌 / 翘鳞肉齿菌',
+    shortName: '虎掌菌',
+    englishName: "Hawk's Wing / Shingled Hedgehog",
+    shortNameEn: "Hawk's Wing",
+    scientificName: 'Sarcodon imbricatus',
+    emoji: '🦅',
+    accentColor: '#d97706',
+    inatTaxonIds: '122335',
+    inatColor: '#92400e',
+    peakMonths: [8, 9, 10],
+    seasonSummary: '8 月 – 10 月（高海拔早秋）',
+    seasonSummaryEn: 'Aug – Oct (Montane Fall)',
+    elevSummary: '1,800 – 6,200 ft',
+    defaults: {
+      minElevFt: 1800,
+      maxElevFt: 6200,
+      minCanopyPct: 48,
+      useCanopy: true,
+      burnScarOnly: false,
+      minScoreThreshold: 64,
+    },
+    weights: {
+      canopy: 0.28,
+      moisture: 0.2,
+      aspect: 0.16,
+      elevation: 0.2,
+      slope: 0.16,
+      moistureMode: 'balanced',
+      aspectPref: 'north',
+      idealSlopeMax: 22,
+    },
+    palette: [
+      [214, 211, 209, 130],
+      [168, 162, 158, 172],
+      [180, 83, 9, 208],
+      [146, 64, 14, 232],
+      [250, 204, 21, 246],
+    ],
+    legends: [
+      { label: '低', labelEn: 'Low', color: '#d6d3d1' },
+      { label: '中低', labelEn: 'Mod-Low', color: '#a8a29e' },
+      { label: '中等', labelEn: 'Moderate', color: '#b45309' },
+      { label: '中高', labelEn: 'Mod-High', color: '#92400e' },
+      { label: '极高 · 高山针叶', labelEn: 'Prime · Montane Conifer', color: '#facc15' },
+    ],
+    presetOverlays: ['usfs-trails', 'usfs-mvum'],
+    guide: {
+      tagline: '菌盖布满同心翘起深褐大鳞片、背面长满灰褐齿刺的“黑虎掌”，干制煲汤或磨粉香气极其浓郁！',
+      seasonDetail:
+        '8 月下旬至 10 月中高海拔针叶林随夏末秋初冷雨启动，9 月至 10 月中旬在喀斯喀特与奥林匹克山脉中高山带最常见。',
+      habitat:
+        '中高海拔（1,800–6,200 ft）云杉（Spruce）、冷杉（True Fir）与松林针叶腐殖层地面，常散生、成排或形成小蘑菇圈，偏好排水均衡、微偏北的成熟针叶坡面。',
+      mapTips:
+        '重点关注中高海拔国家森林针叶坡面与林道/步道周边成熟林带，配合「iNat 实拍点」与历年热区锁定老产点。',
+      idTraits:
+        '浅褐至深褐色宽大肉质菌盖（中央微凹），表面覆盖同心排列、粗大向上翘起的黑褐色瓦片状鳞片；盖下密布灰褐色易折断小齿刺（延生至柄上部，绝无菌褶）；菌肉淡棕白、坚实不发蓝。',
+      safetyWarning:
+        '风味与辨识提示：务必只选幼嫩肥厚、齿刺尚浅色的年轻子实体（老熟个体发苦发硬，可刮去齿刺并焯水/晒干提香）；特别注意避开同属极苦的粗糙肉齿菌（Sarcodon scabrosus——菌柄最基部常带明显蓝绿色/灰绿色斑，味极苦不可食）。',
+    },
+    guideEn: {
+      tagline:
+        'Sculpted brown-scaled toothed conifer mushroom prized young for rich savory aroma (especially dried for soups & powders).',
+      seasonDetail:
+        'Emerges late August through October after the first soaking late-summer/early-autumn rains across mid-to-high Cascade and Olympic conifer zones.',
+      habitat:
+        'Montane spruce, true fir, and pine forests (1,800–6,200 ft) fruiting terrestrially in needle duff — singly, in overlapping clusters, or fairy arcs on cool conifer slopes.',
+      mapTips:
+        'Focus on mid-to-high elevation National Forest conifer slopes near forest roads and trails; cross-check with iNaturalist historical sightings.',
+      idTraits:
+        'Broad tan-to-dark-brown cap with a sunken center covered in coarse, upturned concentric shingle-like dark scales; dense fragile grayish-brown decurrent teeth underneath (no gills); pale brownish-white firm flesh.',
+      safetyWarning:
+        'Flavor & lookalike note: Harvest ONLY young, tender caps (older specimens turn tough and bitter; scraping teeth and drying concentrates rich umami). Avoid intensely bitter Sarcodon scabrosus, which typically shows a distinctive greenish-blue stain at the very base of the stem.',
+    },
+  },
+  {
     id: 'leccinum',
     name: '疣柄牛肝菌',
     shortName: '疣柄牛肝菌',

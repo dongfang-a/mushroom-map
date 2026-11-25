@@ -1,5 +1,5 @@
-import React from 'react';
-import { Globe, Ruler, Settings, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle2, Globe, Ruler, Settings, Smartphone, X } from 'lucide-react';
 import type { AppPreferences, Lang, LangPref, UnitPreset, UnitSettings } from '../types/map';
 import { detectSystemLang, UI_TEXT } from '../i18n/translations';
 import {
@@ -13,23 +13,53 @@ interface SettingsModalProps {
   open: boolean;
   prefs: AppPreferences;
   lang: Lang;
+  canNativeInstall: boolean;
+  isInstalledPwa: boolean;
+  onTriggerInstall: () => Promise<boolean>;
   onChangePrefs: (next: AppPreferences) => void;
   onClose: () => void;
+}
+
+function detectInstallPlatform(): 'wechat' | 'ios' | 'other' {
+  if (typeof navigator === 'undefined') return 'other';
+  const ua = navigator.userAgent || '';
+  if (/micromessenger/i.test(ua)) return 'wechat';
+  const isIos =
+    /iPad|iPhone|iPod/i.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIos) return 'ios';
+  return 'other';
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   open,
   prefs,
   lang,
+  canNativeInstall,
+  isInstalledPwa,
+  onTriggerInstall,
   onChangePrefs,
   onClose,
 }) => {
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
   if (!open) return null;
 
   const t = UI_TEXT[lang];
   const resolvedUnits = resolveUnits(prefs);
   const sysLang = detectSystemLang();
   const sysUnit = detectSystemUnitSystem();
+  const platform = detectInstallPlatform();
+
+  const handleInstallClick = async () => {
+    if (isInstalledPwa) return;
+    if (canNativeInstall) {
+      const ok = await onTriggerInstall();
+      if (!ok) setShowInstallGuide(true);
+    } else {
+      setShowInstallGuide((v) => !v);
+    }
+  };
 
   const setLangPref = (langPref: LangPref) => {
     onChangePrefs({ ...prefs, langPref });
@@ -118,6 +148,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       bLabel: t.optHa,
     },
   ];
+
+  const guideTitle =
+    platform === 'wechat'
+      ? t.settingsInstallWechatTitle
+      : platform === 'ios'
+        ? t.settingsInstallIosTitle
+        : t.settingsInstallDesktopTitle;
+
+  const guideSteps =
+    platform === 'wechat'
+      ? t.settingsInstallWechatSteps
+      : platform === 'ios'
+        ? t.settingsInstallIosSteps
+        : t.settingsInstallDesktopSteps;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -239,6 +283,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 );
               })}
             </div>
+          </div>
+
+          {/* Add to Home Screen / Create Desktop Icon */}
+          <div className="settings-section">
+            <div className="settings-section-title">
+              <Smartphone size={14} color="#54e36c" />
+              <span>{t.settingsInstallHeading}</span>
+            </div>
+
+            {isInstalledPwa ? (
+              <div className="install-done-pill">
+                <CheckCircle2 size={15} color="#4ade80" />
+                <span>{t.settingsInstallInstalled}</span>
+              </div>
+            ) : (
+              <>
+                <button
+                  className="install-shortcut-btn"
+                  onClick={handleInstallClick}
+                  aria-label="Create desktop or home screen icon"
+                >
+                  <Smartphone size={15} />
+                  <span>
+                    {canNativeInstall ? t.settingsInstallNativeBtn : t.settingsInstallBtn}
+                  </span>
+                </button>
+                <div style={{ fontSize: 10.5, color: '#9aa9a0', lineHeight: 1.4 }}>
+                  {canNativeInstall ? t.settingsInstallReadyHint : t.settingsInstallGuideHint}
+                </div>
+                {showInstallGuide && (
+                  <div className="install-guide-box">
+                    <div style={{ fontWeight: 700, color: '#fde047', marginBottom: 4 }}>
+                      {guideTitle}
+                    </div>
+                    <div style={{ whiteSpace: 'pre-line' }}>{guideSteps}</div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
 

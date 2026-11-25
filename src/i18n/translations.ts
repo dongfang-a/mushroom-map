@@ -356,6 +356,22 @@ export const UI_TEXT = {
     optAc: '英亩 (ac)',
     optHa: '公顷 (ha)',
     settingsDone: '完成',
+    settingsInstallHeading: '桌面 / 主屏幕快捷图标',
+    settingsInstallBtn: '创建桌面 / 主屏幕图标',
+    settingsInstallNativeBtn: '一键添加到桌面 / 主屏幕',
+    settingsInstallInstalled: '已作为独立 App 安装到桌面',
+    settingsInstallReadyHint: '支持浏览器一键安装，离线也能快速打开地图',
+    settingsInstallGuideHint: '像原生 App 一样全屏打开，一键查看创建步骤',
+    settingsInstallWechatTitle: '当前位于微信/内置浏览器：',
+    settingsInstallWechatSteps:
+      '1. 点击右上角「···」→ 选择「在浏览器打开（Safari / Chrome）」；\n2. 在系统浏览器中打开后再点「添加到主屏幕」即可生成桌面图标。',
+    settingsInstallIosTitle: 'iPhone / iPad (Safari) 添加步骤：',
+    settingsInstallIosSteps:
+      '1. 点击浏览器底部「分享」图标（带向上箭头）；\n2. 向下滑动点击「添加到主屏幕」；\n3. 点击右上角「添加」完成创建。',
+    settingsInstallDesktopTitle: '桌面 / 手机浏览器添加步骤：',
+    settingsInstallDesktopSteps:
+      '• Chrome / Edge：点击地址栏右侧安装图标，或在菜单（⋮）中选择「安装 MushroomMap / 添加到主屏幕」；\n• macOS Safari：点击菜单栏「文件」→「添加到程序坞」。',
+    toastInstallSuccess: '✅ 已创建 MushroomMap 桌面图标',
   },
   en: {
     pageTitle: 'MushroomMap — PNW Foraging & Wildfire GIS',
@@ -535,5 +551,21 @@ export const UI_TEXT = {
     optAc: 'Acres (ac)',
     optHa: 'Hectares (ha)',
     settingsDone: 'Done',
+    settingsInstallHeading: 'Home Screen / Desktop Icon',
+    settingsInstallBtn: 'Create Desktop / Home Screen Icon',
+    settingsInstallNativeBtn: 'Add to Home Screen / Desktop',
+    settingsInstallInstalled: 'Already Installed as Standalone App',
+    settingsInstallReadyHint: 'One-tap browser install for quick full-screen access',
+    settingsInstallGuideHint: 'Launch full-screen like a native app — tap for quick steps',
+    settingsInstallWechatTitle: 'In-App Browser Detected (WeChat):',
+    settingsInstallWechatSteps:
+      '1. Tap "···" at the top-right and choose "Open in Safari / Browser";\n2. Once opened in Safari or Chrome, tap "Add to Home Screen".',
+    settingsInstallIosTitle: 'iPhone / iPad (Safari) Steps:',
+    settingsInstallIosSteps:
+      '1. Tap the Share button (square with up-arrow) at the bottom bar;\n2. Scroll down and tap "Add to Home Screen";\n3. Tap "Add" at the top-right.',
+    settingsInstallDesktopTitle: 'Chrome / Edge / Safari Steps:',
+    settingsInstallDesktopSteps:
+      '• Chrome / Edge: click the Install icon in the address bar, or open menu (⋮) → "Install MushroomMap / Add to Home Screen";\n• macOS Safari: File → "Add to Dock".',
+    toastInstallSuccess: '✅ MushroomMap shortcut added to your home screen',
   },
 } as const;

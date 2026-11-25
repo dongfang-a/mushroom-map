@@ -106,6 +106,11 @@ import { SettingsModal } from './components/SettingsModal';
 import { SpeciesGuideModal } from './components/SpeciesGuideModal';
 import { WaypointsSheet } from './components/WaypointsSheet';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
 registerCustomTileProtocols();
 setFilterStrength(loadFilterStrength());
 setHighContrastPalette(loadHighContrast());
@@ -169,6 +174,16 @@ export const App: React.FC = () => {
   const [guideSpeciesId, setGuideSpeciesId] = useState<SpeciesId | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeHudCollapsed, setActiveHudCollapsed] = useState(false);
+  const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(
+    null,
+  );
+  const [isInstalledPwa, setIsInstalledPwa] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const nav = navigator as Navigator & { standalone?: boolean };
+    return (
+      window.matchMedia?.('(display-mode: standalone)').matches || nav.standalone === true
+    );
+  });
 
   const [basemapId, setBasemapId] = useState<BasemapId>(loadBasemap);
   const [mushroomOpacity, setMushroomOpacityState] = useState<number>(loadMushroomOpacity);
@@ -247,6 +262,41 @@ export const App: React.FC = () => {
       setToast((prev) => (prev === msg ? null : prev));
     }, 2800);
   }, []);
+
+  // Capture browser PWA install prompt so users can create a desktop / home-screen icon from Settings
+  useEffect(() => {
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setInstallPromptEvent(e as BeforeInstallPromptEvent);
+    };
+    const onAppInstalled = () => {
+      setIsInstalledPwa(true);
+      setInstallPromptEvent(null);
+      showToast(UI_TEXT[langRef.current].toastInstallSuccess);
+    };
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    window.addEventListener('appinstalled', onAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
+  }, [showToast]);
+
+  const handleTriggerInstall = useCallback(async (): Promise<boolean> => {
+    if (!installPromptEvent) return false;
+    try {
+      await installPromptEvent.prompt();
+      const choice = await installPromptEvent.userChoice;
+      if (choice.outcome === 'accepted') {
+        setIsInstalledPwa(true);
+        setInstallPromptEvent(null);
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, [installPromptEvent]);
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
@@ -1713,11 +1763,14 @@ export const App: React.FC = () => {
 
       {toast && <div className="toast">{toast}</div>}
 
-      {/* Settings Modal (Language & Measurement Units) */}
+      {/* Settings Modal (Language, Units & Create Desktop Icon) */}
       <SettingsModal
         open={settingsOpen}
         prefs={prefs}
         lang={lang}
+        canNativeInstall={Boolean(installPromptEvent)}
+        isInstalledPwa={isInstalledPwa}
+        onTriggerInstall={handleTriggerInstall}
         onChangePrefs={handleChangePrefs}
         onClose={() => setSettingsOpen(false)}
       />
