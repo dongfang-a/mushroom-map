@@ -425,6 +425,24 @@ export const OVERLAYS: OverlayDef[] = [
 
   // 3. Terrain & Elevation
   {
+    id: 'cascade-crest',
+    name: 'Cascade 分水岭参考线 (东西坡分界)',
+    nameEn: 'Cascade Crest Divide (West / East Line)',
+    shortName: 'Cascade 分水岭',
+    shortNameEn: 'Cascade Crest',
+    categoryId: 'terrain',
+    kind: 'crest-geojson',
+    description: '太平洋山脊（Cascade Crest）东西坡雨影分界参考虚线——西侧为湿润铁杉雨林带，东侧为黄松/白冷杉雨影带',
+    descriptionEn:
+      'Reference dashed line along the hydrologic Cascade Crest dividing the wet Westside rainforest from the dry Eastside rain shadow',
+    defaultVisible: false,
+    defaultOpacity: 0.85,
+    color: '#38bdf8',
+    minzoom: 4,
+    maxzoom: 16,
+    legends: [{ label: 'Cascade 分水岭（左西坡 / 右东坡）', labelEn: 'Cascade Crest (West | East)', color: '#38bdf8' }],
+  },
+  {
     id: 'elevation-band',
     name: '高程区间高亮 (Elevation Finder)',
     nameEn: 'Elevation Band Highlighter',

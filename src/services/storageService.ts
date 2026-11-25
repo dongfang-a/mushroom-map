@@ -1,6 +1,7 @@
 import type {
   AppPreferences,
   BasemapId,
+  EcoRegionFilter,
   ElevBandParams,
   ForageWaypoint,
   OverlayRuntimeState,
@@ -23,6 +24,7 @@ const KEYS = {
   waypoints: 'mm_waypoints_v1',
   viewport: 'mm_viewport_v3',
   preferences: 'mm_preferences_v1',
+  ecoRegionFilter: 'mm_eco_region_v1',
 };
 
 const VALID_SPECIES = new Set<string>(SPECIES_CATALOG.map((s) => s.id));
@@ -127,6 +129,16 @@ export function loadHighContrast(): boolean {
 
 export function saveHighContrast(val: boolean) {
   localStorage.setItem(KEYS.highContrast, val ? '1' : '0');
+}
+
+export function loadEcoRegionFilter(): EcoRegionFilter {
+  const saved = localStorage.getItem(KEYS.ecoRegionFilter);
+  if (saved === 'west' || saved === 'east') return saved;
+  return 'all';
+}
+
+export function saveEcoRegionFilter(val: EcoRegionFilter) {
+  localStorage.setItem(KEYS.ecoRegionFilter, val);
 }
 
 export function loadBasemap(): BasemapId {

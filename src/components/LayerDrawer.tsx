@@ -28,6 +28,7 @@ import {
 } from '../utils/units';
 import type {
   BasemapId,
+  EcoRegionFilter,
   ElevBandParams,
   FireSummary,
   InatObservation,
@@ -56,6 +57,8 @@ interface LayerDrawerProps {
   onChangeSpeciesParams: (next: SpeciesModelOverride) => void;
   filterStrength: number;
   onChangeFilterStrength: (val: number) => void;
+  ecoRegionFilter: EcoRegionFilter;
+  onChangeEcoRegionFilter: (val: EcoRegionFilter) => void;
   highContrast: boolean;
   onToggleHighContrast: () => void;
   blinkEnabled: boolean;
@@ -94,6 +97,8 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
   onChangeSpeciesParams,
   filterStrength,
   onChangeFilterStrength,
+  ecoRegionFilter,
+  onChangeEcoRegionFilter,
   highContrast,
   onToggleHighContrast,
   blinkEnabled,
@@ -306,6 +311,35 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                         }
                                       />
                                       <span>{filterStrength}%</span>
+                                    </div>
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 4,
+                                        marginTop: 2,
+                                      }}
+                                    >
+                                      <span style={{ fontSize: 11, color: '#cbd5e1', fontWeight: 600 }}>
+                                        {t.ecoFilterLabel}
+                                      </span>
+                                      <div className="segmented-3">
+                                        {(
+                                          [
+                                            ['all', t.ecoFilterAll],
+                                            ['west', t.ecoFilterWest],
+                                            ['east', t.ecoFilterEast],
+                                          ] as Array<[EcoRegionFilter, string]>
+                                        ).map(([val, label]) => (
+                                          <button
+                                            key={val}
+                                            className={`seg-btn ${ecoRegionFilter === val ? 'active' : ''}`}
+                                            onClick={() => onChangeEcoRegionFilter(val)}
+                                          >
+                                            {label}
+                                          </button>
+                                        ))}
+                                      </div>
                                     </div>
                                     <div className="mini-toggle-row">
                                       <span>{t.highContrastToggle}</span>

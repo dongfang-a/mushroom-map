@@ -573,21 +573,21 @@ export const SPECIES_CATALOG: SpeciesProfile[] = [
   },
   {
     id: 'porcini',
-    name: '美味牛肝菌（春 / 秋）',
-    shortName: '美味牛肝菌',
-    englishName: 'King Bolete / Porcini',
-    shortNameEn: 'Porcini / King',
-    scientificName: 'Boletus edulis / rex-veris',
+    name: '美味牛肝菌（秋）',
+    shortName: '美味牛肝菌（秋）',
+    englishName: 'Fall King Bolete / Porcini',
+    shortNameEn: 'Fall Porcini',
+    scientificName: 'Boletus edulis',
     emoji: '🥖',
     accentColor: '#b45309',
-    inatTaxonIds: '48701,438025',
+    inatTaxonIds: '48701',
     inatColor: '#ca8a04',
-    peakMonths: [5, 6, 9, 10, 11],
-    seasonSummary: '春 5–6 月 / 秋 9–11 月',
-    seasonSummaryEn: 'May–Jun & Sep–Nov',
-    elevSummary: '0 – 5,800 ft',
+    peakMonths: [9, 10, 11],
+    seasonSummary: '9 月 – 11 月（海岸云杉 / 西坡）',
+    seasonSummaryEn: 'Sep – Nov (Coast & Westside)',
+    elevSummary: '0 – 5,600 ft',
     defaults: {
-      minElevFt: 100,
+      minElevFt: 0,
       maxElevFt: 5600,
       minCanopyPct: 38,
       useCanopy: true,
@@ -616,33 +616,111 @@ export const SPECIES_CATALOG: SpeciesProfile[] = [
       { label: '中低', labelEn: 'Mod-Low', color: '#fcd34d' },
       { label: '中等', labelEn: 'Moderate', color: '#d97706' },
       { label: '中高', labelEn: 'Mod-High', color: '#a16207' },
-      { label: '极高 · 平缓林缘', labelEn: 'Prime · Gentle Edges', color: '#854d0e' },
+      { label: '极高 · 海岸/西坡', labelEn: 'Prime · Coast / West', color: '#854d0e' },
     ],
-    presetOverlays: ['noaa-snow', 'usfs-mvum', 'usfs-trails'],
+    presetOverlays: ['usfs-mvum', 'usfs-trails'],
     guide: {
-      tagline: 'PNW 春秋双季大热门：春季追东坡融雪线，秋季追海岸云杉雾带与高山林缘。',
+      tagline: 'PNW 秋季海陆双栖王牌牛肝菌：主攻太平洋海岸西加云杉雾带与 Cascade 西坡/分水岭针叶林缘。',
       seasonDetail:
-        '春牛肝（B. rex-veris）5–6 月紧跟喀斯喀特东坡融雪线；秋牛肝（B. edulis）9–11 月出在高山针叶林及海岸云杉/岸松带。',
-      habitat: '偏爱坡度平缓（<18%）、林缘透光处与林道两旁；春季伴生黄松/白冷杉，秋季伴生海岸云杉/岸松/铁杉。',
+        '8 月底高海拔（3,500–5,200 ft）率先启动，9–11 月海岸雾带（0–1,200 ft 西加云杉/岸松林）及西坡针叶林迎来盛产高峰；干旱东坡松林明显偏少（模型已对东坡做区域扣分）。',
+      habitat: '偏爱坡度平缓（<18%）、林缘透光处、林道两旁与草坡针叶带；海岸强伴生西加云杉（Sitka Spruce）与岸松，山地伴生冷杉/铁杉/花旗松。',
       mapTips:
-        '此模型重点加权平缓坡面，并已联动开启「NOAA 实时积雪深度」与「USFS MVUM 合法林道」方便沿林缘寻找。',
-      idTraits: '红棕至面包色圆顶菌盖、白至黄绿色海绵状菌管（无菌褶）、粗壮菌柄上部有清晰白色细网纹、切开不变蓝。',
+        '海岸带重点锁定 0–1,200 ft 云杉雾带与林道边；山地锁定西坡与分水岭平缓林缘，搭配「USFS MVUM 合法林道」效率极高。',
+      idTraits: '烤栗至面包色光滑圆顶菌盖（无春季白霜）、白至黄绿色海绵状菌管（无菌褶）、粗壮菌柄上部具清晰白色细网纹、切开不变蓝。',
       safetyWarning:
         '避开菌管鲜红或切开迅速变蓝的毒牛肝菌（如 Rubroboletus）及极苦的苦牛肝（Tylopilus）；并注意区分柄带粗糙黑/褐小疣点、切面易变灰黑的疣柄牛肝菌（Leccinum）。',
     },
     guideEn: {
       tagline:
-        'Iconic two-season PNW prized bolete: chase receding East-slope snowlines in spring and coastal spruce / montane forest edges in autumn.',
+        'Classic autumn PNW Porcini: dominant in the Pacific Coast Sitka Spruce fog belt and West Cascades / Crest conifer edges.',
       seasonDetail:
-        'Spring King (B. rex-veris) follows May–June Cascade East-slope snowmelt; Fall King (B. edulis) peaks Sep–Nov in montane conifers and coastal Sitka spruce / shore pine belts.',
+        'Starts late August in high West Cascades, peaking Sep–Nov across coastal Sitka spruce / shore pine belts (sea level to 1,200 ft) and west-slope conifers; scarce in dry Eastside pine forests (regionally penalized).',
       habitat:
-        'Gentle (<18%) sunlit forest edges, roadbanks, and open conifer benches under ponderosa pine / white fir (spring) or spruce, shore pine & hemlock (fall).',
+        'Gentle (<18%) sunlit forest edges, roadbanks, and mossy conifer benches under Sitka spruce & shore pine on the coast, or fir/hemlock/spruce in the mountains.',
       mapTips:
-        'Strongly weights gentle slopes and auto-enables NOAA Snow Depth + USFS MVUM roads to scout melting edges and roadbanks.',
+        'Scout coastal Sitka spruce fog zones and gentle West Cascade forest roads with USFS MVUM enabled.',
       idTraits:
-        'Smooth chestnut-brown bun-like cap, white-to-olive-yellow spongy pores (no gills), bulbous cream stipe with fine white reticulation (netting) near the top; firm white unchanging flesh.',
+        'Smooth toasted-chestnut bun cap (lacks spring frosty bloom), white-to-olive-yellow spongy pores, stout cream stipe with crisp fine white upper netting; firm unchanging white flesh.',
       safetyWarning:
-        'Avoid red-pored or fast blue-bruising boletes (e.g. Rubroboletus) and intensely bitter Tylopilus; also distinguish from rough-scabered Leccinum stalks.',
+        'Avoid red-pored or fast blue-bruising boletes (Rubroboletus) and bitter Tylopilus; also distinguish from rough-scabered Leccinum stalks.',
+    },
+  },
+  {
+    id: 'spring-king',
+    name: '美味牛肝菌（春）',
+    shortName: '美味牛肝菌（春）',
+    englishName: 'Spring King Bolete / Porcini',
+    shortNameEn: 'Spring King',
+    scientificName: 'Boletus rex-veris',
+    emoji: '🥐',
+    accentColor: '#f59e0b',
+    inatTaxonIds: '438025',
+    inatColor: '#d97706',
+    peakMonths: [5, 6],
+    seasonSummary: '5 月 – 6 月（Cascade 东坡融雪线）',
+    seasonSummaryEn: 'May – Jun (East Cascades Snowmelt)',
+    elevSummary: '2,800 – 6,800 ft',
+    elevSummaryNote: 'Cascade 东坡雨影带主场',
+    elevSummaryNoteEn: 'East Cascades rain shadow',
+    defaults: {
+      minElevFt: 2800,
+      maxElevFt: 6800,
+      minCanopyPct: 35,
+      useCanopy: true,
+      burnScarOnly: false,
+      minScoreThreshold: 64,
+    },
+    weights: {
+      canopy: 0.22,
+      moisture: 0.16,
+      aspect: 0.2,
+      elevation: 0.18,
+      slope: 0.24,
+      moistureMode: 'balanced',
+      aspectPref: 'warm',
+      idealSlopeMax: 16,
+    },
+    palette: [
+      [254, 243, 199, 115],
+      [253, 224, 71, 160],
+      [245, 158, 11, 200],
+      [217, 119, 6, 228],
+      [250, 204, 21, 246],
+    ],
+    legends: [
+      { label: '低', labelEn: 'Low', color: '#fef3c7' },
+      { label: '中低', labelEn: 'Mod-Low', color: '#fde047' },
+      { label: '中等', labelEn: 'Moderate', color: '#f59e0b' },
+      { label: '中高', labelEn: 'Mod-High', color: '#d97706' },
+      { label: '极高 · 东坡融雪带', labelEn: 'Prime · East Snowmelt', color: '#facc15' },
+    ],
+    presetOverlays: ['noaa-snow', 'usfs-mvum', 'usfs-trails', 'cascade-crest'],
+    guide: {
+      tagline: 'Cascade 山脉东坡春季独门珍品！紧跟 5–6 月融雪线破土成簇冒出，常见于 Cle Elum、Teanaway、Chelan 与 Sisters/Deschutes 干爽松冷杉林。',
+      seasonDetail:
+        '4 月底至 5 月从东坡中低海拔（2,800–4,200 ft）积雪刚融化的向阳林缘开启，6 月随雪线一路推升至 5,500–6,800 ft；湿润西坡与海岸罕见（模型已对西坡执行区域重扣）。',
+      habitat:
+        'Cascade 东坡雨影区（Eastside）及蓝山干爽山地针叶林，强伴生黄松（Ponderosa Pine）、白冷杉/巨冷杉（White/Grand Fir）与扭叶松，常藏在厚松针隆起的“蘑菇包”下成团紧挨出菇。',
+      mapTips:
+        '已自动开启「NOAA 实时积雪深度」「USFS MVUM 林道」与「Cascade 分水岭参考线」：专盯分水岭以东、积雪边缘刚化雪 1–2 周且土温回升至 50°F（10°C）以上的缓坡林缘！',
+      idTraits:
+        '粉红褐至淡红棕色厚实菌盖，幼嫩期盖面常覆一层标志性的白灰霜/粉雾（chalky bloom），常 3–6 朵紧簇连生；粗壮肥白菌柄上部具淡白细网纹，海绵菌管初白转鲜黄/橄榄黄，切开洁白不变蓝。',
+      safetyWarning:
+        '极佳春季食用菌（且春季虫蛀远少于秋季）；同样避开菌管鲜红或按压速变蓝的牛肝菌，并注意春季东坡松林中常伴生羊肚菌——切勿误采实心有毒假羊肚菌。',
+    },
+    guideEn: {
+      tagline:
+        'The legendary East Cascades spring porcini! Follows receding May–June snowlines in tight clusters across Cle Elum, Chelan, Wasco & Deschutes pine/fir woods.',
+      seasonDetail:
+        'Starts late April–May around 2,800–4,200 ft on newly snow-free sunny Eastside benches and climbs to 6,800 ft through June; rare on the wet Westside/coast (heavily penalized west of the Cascade Crest).',
+      habitat:
+        'Dry montane East Cascades rain-shadow conifers — strongly mycorrhizal with Ponderosa pine, lodgepole pine, and grand/white fir, pushing up in clusters under thick pine-needle duff ("mushrumps").',
+      mapTips:
+        'Auto-enables NOAA Snow Depth, USFS MVUM roads & the Cascade Crest Divide line: target snow-edge benches east of the crest 1–2 weeks after snowmelt as soil warms above 50°F (10°C).',
+      idTraits:
+        'Rosy-tan to reddish-brown firm bun cap often dusted with a signature chalky-white frosty "bloom" when young, frequently clustered together; stout cream reticulated stem, white-to-yellow-olive non-blueing pores.',
+      safetyWarning:
+        'Choice spring edible (usually far less buggy than fall porcini). Avoid red-pored or blue-staining boletes, and if harvesting nearby spring morels always slice lengthwise to rule out solid False Morels.',
     },
   },
   {

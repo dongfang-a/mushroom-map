@@ -7,11 +7,14 @@ export type SpeciesId =
   | 'chanterelle'
   | 'matsutake'
   | 'porcini'
+  | 'spring-king'
   | 'fib-king'
   | 'admirable'
   | 'hawks-wing'
   | 'leccinum'
   | 'morel';
+
+export type EcoRegionFilter = 'all' | 'west' | 'east';
 
 export type Lang = 'zh' | 'en';
 export type LangPref = 'auto' | 'zh' | 'en';
@@ -55,6 +58,7 @@ export type OverlayKind =
   | 'elevband-protocol'
   | 'wildfire-geojson'
   | 'padus-geojson'
+  | 'crest-geojson'
   | 'inat-geojson'
   | 'inat-heatmap'
   | 'arcgis-export'
@@ -184,7 +188,7 @@ export type LegalityRuleKey =
   | 'restricted-other';
 
 export interface ScoreFactorBreakdown {
-  key: 'landcover' | 'elevation' | 'slope' | 'aspect' | 'canopy' | 'moisture';
+  key: 'landcover' | 'region' | 'elevation' | 'slope' | 'aspect' | 'canopy' | 'moisture';
   label: string;
   actual: string;
   ideal: string;

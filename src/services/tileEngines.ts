@@ -1,6 +1,12 @@
 import maplibregl from 'maplibre-gl';
+import {
+  computeSpeciesRegionalFit,
+  getEcoZoneLabel,
+  passesEcoRegionFilter,
+} from '../data/pnwEcoZones';
 import { getSpeciesProfile, type SpeciesProfile } from '../data/speciesCatalog';
 import type {
+  EcoRegionFilter,
   ElevBandParams,
   Lang,
   LegendItem,
@@ -105,6 +111,7 @@ let legalMaskEnabled = true;
 let legalPolygonsLoaded = false;
 let filterStrengthPct = 50;
 let highContrastPaletteEnabled = true;
+let ecoRegionFilter: EcoRegionFilter = 'all';
 let legalPolygonsReadyResolver: (() => void) | null = null;
 const legalPolygonsReadyPromise: Promise<void> = new Promise<void>((res) => {
   legalPolygonsReadyResolver = res;
@@ -113,6 +120,10 @@ let protocolsRegistered = false;
 
 export function setFilterStrength(pct: number) {
   filterStrengthPct = Math.max(0, Math.min(100, Math.round(pct)));
+}
+
+export function setEcoRegionFilter(filter: EcoRegionFilter) {
+  ecoRegionFilter = filter;
 }
 
 export function setHighContrastPalette(enabled: boolean) {
@@ -542,14 +553,24 @@ export function computeSpeciesScore(
   includeBreakdown = false,
   lang: Lang = 'zh',
   units: UnitSettings = IMPERIAL_UNITS,
+  lng?: number,
+  lat?: number,
 ): { score: number; tier: string; breakdown?: ScoreFactorBreakdown[] } {
   const profile: SpeciesProfile = getSpeciesProfile(speciesId);
   const params = resolveEffectiveParams(speciesId);
   const w = profile.weights;
   const hardCanopyMin = Math.max(15, params.minCanopyPct - 12);
 
+  // Manual Cascade East/West region filter gate
+  const manualRegionOut =
+    ecoRegionFilter !== 'all' &&
+    lng !== undefined &&
+    lat !== undefined &&
+    !passesEcoRegionFilter(lng, lat, ecoRegionFilter);
+
   // Fast path for 65,536-pixel tile rendering (skip full breakdown when hard-gated)
   if (!includeBreakdown) {
+    if (manualRegionOut) return { score: 0, tier: '区域筛选外' };
     if (elevFt <= 10) return { score: 0, tier: '水域/滩涂' };
     if (!isLandCoverAllowedForSpecies(speciesId, landCoverClass)) {
       return { score: 0, tier: '城镇/非林地' };
@@ -575,8 +596,13 @@ export function computeSpeciesScore(
         0.05,
         ((canopyPct - hardCanopyMin) / Math.max(1, params.minCanopyPct - hardCanopyMin)) * 0.38,
       );
-    } else if (speciesId === 'matsutake' || speciesId === 'porcini' || speciesId === 'leccinum') {
-      const ideal = speciesId === 'matsutake' ? 62 : 58;
+    } else if (
+      speciesId === 'matsutake' ||
+      speciesId === 'porcini' ||
+      speciesId === 'spring-king' ||
+      speciesId === 'leccinum'
+    ) {
+      const ideal = speciesId === 'matsutake' ? 62 : speciesId === 'spring-king' ? 54 : 58;
       const spread = 24;
       canopyScore = Math.max(0.32, Math.exp(-Math.pow((canopyPct - ideal) / spread, 2)));
     } else {
@@ -652,9 +678,17 @@ export function computeSpeciesScore(
   const canopyOutHard = canopyPct !== null && canopyPct < hardCanopyMin;
   const slopeOutHard = slopePct > w.idealSlopeMax + 20;
 
+  const regionalFit =
+    lng !== undefined && lat !== undefined
+      ? computeSpeciesRegionalFit(speciesId, lng, lat, elevFt, landCoverClass, concavityM)
+      : null;
+
   let score: number;
   let tier: string;
-  if (elevFt <= 10) {
+  if (manualRegionOut) {
+    score = 0;
+    tier = lang === 'en' ? 'Outside Selected Region' : '区域筛选外';
+  } else if (elevFt <= 10) {
     score = 0;
     tier = lang === 'en' ? 'Water / Tidal Flat' : '水域/滩涂';
   } else if (!lcAllowed) {
@@ -699,6 +733,12 @@ export function computeSpeciesScore(
     // Deciduous / riparian hardwood affinity bonus for Leccinum (Birch / Aspen / Madrone)
     if (speciesId === 'leccinum' && landCoverClass === LC_DECIDUOUS_RIPARIAN) {
       gated = Math.min(1.0, gated * 1.12);
+    }
+    // Smooth PNW biogeographical regional fit penalty (Coast / West Cascades / Crest / East Cascades)
+    if (regionalFit && regionalFit.zone !== 'outside') {
+      const regExp = 0.72 + s * 0.48;
+      const regMult = 0.24 + 0.76 * Math.pow(regionalFit.score, regExp);
+      gated *= regMult;
     }
 
     score = Math.max(0, Math.min(100, Math.round(gated * 100)));
@@ -751,7 +791,10 @@ export function computeSpeciesScore(
         : en ? 'Any Aspect (Slight N)' : '各坡向皆宜 (微偏北)';
 
   const idealCanopyLabel =
-    speciesId === 'matsutake' || speciesId === 'porcini' || speciesId === 'leccinum'
+    speciesId === 'matsutake' ||
+    speciesId === 'porcini' ||
+    speciesId === 'spring-king' ||
+    speciesId === 'leccinum'
       ? speciesId === 'leccinum'
         ? en ? '40–75% Hardwood Edge' : '40%–75% 透光阔叶/林缘'
         : en ? '45–78% Semi-Open Conifer' : '45%–78% 半开阔针叶'
@@ -791,6 +834,29 @@ export function computeSpeciesScore(
           : en ? 'Natural forest class OK' : '自然森林地类达标',
       hardGate: !lcAllowed,
     },
+    ...(regionalFit && regionalFit.zone !== 'outside'
+      ? [
+          {
+            key: 'region' as const,
+            label: en ? 'Region' : '区域',
+            actual: getEcoZoneLabel(regionalFit.zone, lang),
+            ideal: en ? regionalFit.idealEn : regionalFit.idealZh,
+            status: manualRegionOut ? ('penalty' as const) : regionalFit.status,
+            summary: manualRegionOut
+              ? en
+                ? ecoRegionFilter === 'east'
+                  ? 'Outside manual East Cascades filter'
+                  : 'Outside manual West Cascades filter'
+                : ecoRegionFilter === 'east'
+                  ? '超出手动筛选的 Cascade 东坡'
+                  : '超出手动筛选的 Cascade 西坡'
+              : en
+                ? regionalFit.summaryEn
+                : regionalFit.summaryZh,
+            hardGate: manualRegionOut,
+          },
+        ]
+      : []),
     {
       key: 'elevation',
       label: en ? 'Elev' : '海拔',
@@ -972,13 +1038,30 @@ async function renderSpeciesTile(
   const filled = new Uint8Array(256 * 256);
   let filledCount = 0;
 
+  // Precompute exact per-row latitude and per-column longitude step for O(1) PNW eco-zone lookup
+  const nTiles = Math.pow(2, z);
+  const rowLats = new Float64Array(256);
+  for (let py = 0; py < 256; py++) {
+    const ty = y + (py + 0.5) / 256;
+    const mercY = Math.PI * (1 - (2 * ty) / nTiles);
+    rowLats[py] = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(mercY) - Math.exp(-mercY)));
+  }
+  const tileMinLng = lonLat[0];
+  const lngStep = (lonLat[2] - lonLat[0]) / 256;
+
   for (let py = 0; py < 256; py++) {
     const ym1 = py > 0 ? py - 1 : 0;
     const yp1 = py < 255 ? py + 1 : 255;
+    const pxLat = rowLats[py];
     for (let px = 0; px < 256; px++) {
       const idx = py * 256 + px;
       if (fireMask && !fireMask[idx]) continue;
       if (legalMask && !legalMask[idx]) continue;
+
+      const pxLng = tileMinLng + (px + 0.5) * lngStep;
+      if (ecoRegionFilter !== 'all' && !passesEcoRegionFilter(pxLng, pxLat, ecoRegionFilter)) {
+        continue;
+      }
 
       const lcClass = landCover ? landCover[idx] : null;
       if (!isLandCoverAllowedForSpecies(speciesId, lcClass)) continue;
@@ -1034,6 +1117,11 @@ async function renderSpeciesTile(
         canopyPct,
         metersPerPx,
         lcClass,
+        false,
+        'zh',
+        IMPERIAL_UNITS,
+        pxLng,
+        pxLat,
       );
       const [r, g, b, a] = speciesScoreToRgba(profile, score, params.minScoreThreshold);
       if (a > 0) {
@@ -1218,6 +1306,8 @@ export async function sampleLocalTerrainAtLngLat(
     true,
     lang,
     units,
+    lng,
+    lat,
   );
 
   return {

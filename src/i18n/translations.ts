@@ -372,6 +372,15 @@ export const UI_TEXT = {
     settingsInstallDesktopSteps:
       '• Chrome / Edge：点击地址栏右侧安装图标，或在菜单（⋮）中选择「安装 MushroomMap / 添加到主屏幕」；\n• macOS Safari：点击菜单栏「文件」→「添加到程序坞」。',
     toastInstallSuccess: '✅ 已创建 MushroomMap 桌面图标',
+    ecoFilterLabel: 'Cascade 东西坡筛选',
+    ecoFilterAll: '全区',
+    ecoFilterWest: '仅西坡',
+    ecoFilterEast: '仅东坡',
+    legendEastSuffix: ' · 仅东坡',
+    legendWestSuffix: ' · 仅西坡',
+    toastEcoAll: '已恢复全区域显示（仍保留各菌种自然区域评分）',
+    toastEcoEast: '已锁定 Cascade 山脉东坡（分水岭以东）',
+    toastEcoWest: '已锁定 Cascade 山脉西坡（分水岭以西）',
   },
   en: {
     pageTitle: 'MushroomMap — PNW Foraging & Wildfire GIS',
@@ -567,5 +576,14 @@ export const UI_TEXT = {
     settingsInstallDesktopSteps:
       '• Chrome / Edge: click the Install icon in the address bar, or open menu (⋮) → "Install MushroomMap / Add to Home Screen";\n• macOS Safari: File → "Add to Dock".',
     toastInstallSuccess: '✅ MushroomMap shortcut added to your home screen',
+    ecoFilterLabel: 'Cascade Slope Filter',
+    ecoFilterAll: 'All PNW',
+    ecoFilterWest: 'West Side',
+    ecoFilterEast: 'East Side',
+    legendEastSuffix: ' · East Side',
+    legendWestSuffix: ' · West Side',
+    toastEcoAll: 'Showing all regions (species regional scoring still active)',
+    toastEcoEast: 'Locked to East Cascades (east of Cascade Crest)',
+    toastEcoWest: 'Locked to West Cascades (west of Cascade Crest)',
   },
 } as const;

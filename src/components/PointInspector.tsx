@@ -94,6 +94,8 @@ export const PointInspector: React.FC<PointInspectorProps> = ({
           true,
           lang,
           units,
+          data.lng,
+          data.lat,
         )
       : null;
 

@@ -317,6 +317,44 @@ export const SPECIES_DEMO_PHOTOS: Record<SpeciesId, SpeciesPhotoItem[]> = {
       attribution: 'User Curated Field Photo',
     },
   ],
+  'spring-king': [
+    {
+      angle: 'top',
+      angleLabel: '俯视（东坡黄松林簇生粉棕菌盖）',
+      angleLabelEn: 'Top View (Clustered Eastside Caps)',
+      angleShort: '俯视 · 簇生盖',
+      angleShortEn: 'Top · Cluster',
+      src: './species-photos/spring-king/top.jpg',
+      caption: '典型春牛肝菌习性：3–6 朵淡粉棕至暖褐色厚实菌盖紧挤成团，从东坡松针与火山浮石土中破土而出。',
+      captionEn:
+        'Signature Spring King habit: tight clusters of rosy-tan to warm brown bun caps pushing up through Eastside pine duff and pumice.',
+      attribution: 'iNaturalist · @westboundwarbler (CC-BY)',
+    },
+    {
+      angle: 'side',
+      angleLabel: '侧面（松果针叶林肥白大肚柄）',
+      angleLabelEn: 'Side View (Pine-Duff Profile)',
+      angleShort: '侧面 · 株型',
+      angleShortEn: 'Side · Profile',
+      src: './species-photos/spring-king/side.jpg',
+      caption: '生于黄松松果与厚松针地，红棕圆润菌盖配洁白肥厚实心大肚菌柄，盖缘可见淡黄海绵菌管。',
+      captionEn:
+        'Fruiting amid ponderosa pine cones and needles with a warm reddish-tan cap, plump cream bulbous stipe, and pale yellow pores.',
+      attribution: 'iNaturalist · @vitaliym (CC-BY)',
+    },
+    {
+      angle: 'underside',
+      angleLabel: '仰视 / 群像（幼嫩白霜盖面与成熟黄菌管）',
+      angleLabelEn: 'Underside & Buttons (Frosty Bloom & Yellow Pores)',
+      angleShort: '仰视 · 菌管与幼菇',
+      angleShortEn: 'Underside · Pores',
+      src: './species-photos/spring-king/underside.jpg',
+      caption: '一图看全特征：幼菇盖面带典型白灰粉霜（bloom），成熟个体盖下为金黄/橄榄黄海绵菌管（不变蓝），常伴东坡绿狼地衣。',
+      captionEn:
+        'Classic textbook lineup: young buttons show the signature frosty bloom, mature caps display bright yellow-olive non-blueing pores alongside Eastside wolf lichen.',
+      attribution: 'iNaturalist · @alan_rockefeller (CC-BY)',
+    },
+  ],
   'fib-king': [
     {
       angle: 'top',

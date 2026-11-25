@@ -27,6 +27,7 @@ import {
   DEFAULT_ZOOM,
   OVERLAYS,
 } from './data/mapSources';
+import { CASCADE_CREST_GEOJSON } from './data/pnwEcoZones';
 import {
   getCurrentSeasonStatus,
   getSpeciesProfile,
@@ -48,6 +49,7 @@ import {
 } from './services/inatService';
 import {
   loadBasemap,
+  loadEcoRegionFilter,
   loadElevBandParams,
   loadFilterStrength,
   loadHighContrast,
@@ -59,6 +61,7 @@ import {
   loadViewport,
   loadWaypoints,
   saveBasemap,
+  saveEcoRegionFilter,
   saveElevBandParams,
   saveFilterStrength,
   saveHighContrast,
@@ -76,6 +79,7 @@ import {
   registerCustomTileProtocols,
   setActiveFirePolygons,
   setActiveLegalPolygons,
+  setEcoRegionFilter,
   setElevBandParams,
   setFilterStrength,
   setHighContrastPalette,
@@ -85,6 +89,7 @@ import {
 import type {
   AppPreferences,
   BasemapId,
+  EcoRegionFilter,
   ElevBandParams,
   FireSummary,
   ForageWaypoint,
@@ -114,6 +119,7 @@ interface BeforeInstallPromptEvent extends Event {
 registerCustomTileProtocols();
 setFilterStrength(loadFilterStrength());
 setHighContrastPalette(loadHighContrast());
+setEcoRegionFilter(loadEcoRegionFilter());
 
 function buildInitialStyle(basemapId: BasemapId): maplibregl.StyleSpecification {
   const bm = BASEMAPS.find((b) => b.id === basemapId) || BASEMAPS[0];
@@ -188,6 +194,8 @@ export const App: React.FC = () => {
   const [basemapId, setBasemapId] = useState<BasemapId>(loadBasemap);
   const [mushroomOpacity, setMushroomOpacityState] = useState<number>(loadMushroomOpacity);
   const [filterStrength, setFilterStrengthState] = useState<number>(loadFilterStrength);
+  const [ecoRegionFilter, setEcoRegionFilterState] =
+    useState<EcoRegionFilter>(loadEcoRegionFilter);
   const [highContrast, setHighContrastState] = useState<boolean>(loadHighContrast);
   const [blinkEnabled, setBlinkEnabled] = useState<boolean>(false);
   const [overlayStates, setOverlayStates] = useState<Record<string, OverlayRuntimeState>>(() => {
@@ -356,6 +364,20 @@ export const App: React.FC = () => {
     });
   }, [showToast]);
 
+  const handleChangeEcoRegionFilter = useCallback(
+    (next: EcoRegionFilter) => {
+      setEcoRegionFilterState(next);
+      setEcoRegionFilter(next);
+      saveEcoRegionFilter(next);
+      setSpeciesRev((r) => r + 1);
+      const tx = UI_TEXT[langRef.current];
+      showToast(
+        next === 'east' ? tx.toastEcoEast : next === 'west' ? tx.toastEcoWest : tx.toastEcoAll,
+      );
+    },
+    [showToast],
+  );
+
   const handleToggleBlink = useCallback(() => {
     setBlinkEnabled((prev) => {
       const next = !prev;
@@ -416,6 +438,7 @@ export const App: React.FC = () => {
       'usfs-mvum',
       'noaa-snow',
       'noaa-precip-7d',
+      'cascade-crest',
     ];
     const wanted = new Set(profile.presetOverlays);
 
@@ -1101,9 +1124,53 @@ export const App: React.FC = () => {
         }
       }
 
+      // 7b. Cascade Crest Divide dashed reference line
+      const crestSt = overlayStates['cascade-crest'];
+      if (crestSt) {
+        const srcId = 'cascade-crest';
+        const haloId = 'cascade-crest-halo';
+        const lineId = 'cascade-crest-line';
+        if (crestSt.visible) {
+          if (!map.getSource(srcId)) {
+            map.addSource(srcId, { type: 'geojson', data: CASCADE_CREST_GEOJSON });
+            map.addLayer({
+              id: haloId,
+              type: 'line',
+              source: srcId,
+              paint: {
+                'line-color': '#0b1210',
+                'line-width': 4.5,
+                'line-opacity': crestSt.opacity * 0.72,
+              },
+            });
+            map.addLayer({
+              id: lineId,
+              type: 'line',
+              source: srcId,
+              paint: {
+                'line-color': '#38bdf8',
+                'line-width': 2.2,
+                'line-dasharray': [4, 3],
+                'line-opacity': crestSt.opacity,
+              },
+            });
+          } else {
+            map.setLayoutProperty(haloId, 'visibility', 'visible');
+            map.setLayoutProperty(lineId, 'visibility', 'visible');
+            map.setPaintProperty(haloId, 'line-opacity', crestSt.opacity * 0.72);
+            map.setPaintProperty(lineId, 'line-opacity', crestSt.opacity);
+          }
+        } else if (map.getLayer(lineId)) {
+          map.setLayoutProperty(haloId, 'visibility', 'none');
+          map.setLayoutProperty(lineId, 'visibility', 'none');
+        }
+      }
+
       // Keep crisp overlays above heatmap
       if (map.getLayer('usgs-nhd-streams')) map.moveLayer('usgs-nhd-streams');
       if (map.getLayer('usfs-trails')) map.moveLayer('usfs-trails');
+      if (map.getLayer('cascade-crest-halo')) map.moveLayer('cascade-crest-halo');
+      if (map.getLayer('cascade-crest-line')) map.moveLayer('cascade-crest-line');
       if (map.getLayer('inat-sightings-circle')) map.moveLayer('inat-sightings-circle');
       if (map.getLayer('waypoints-circle')) map.moveLayer('waypoints-circle');
     };
@@ -1640,6 +1707,11 @@ export const App: React.FC = () => {
                 <span className="hud-off-badge">{t.offSeasonBadge}</span>
               )}
               {legalZonesVisible ? t.legendLegalSuffix : ''}
+              {ecoRegionFilter === 'east'
+                ? t.legendEastSuffix
+                : ecoRegionFilter === 'west'
+                  ? t.legendWestSuffix
+                  : ''}
             </span>
             <button
               onClick={() => setGuideSpeciesId(speciesId)}
@@ -1801,6 +1873,8 @@ export const App: React.FC = () => {
         }
         filterStrength={filterStrength}
         onChangeFilterStrength={handleFilterStrengthChange}
+        ecoRegionFilter={ecoRegionFilter}
+        onChangeEcoRegionFilter={handleChangeEcoRegionFilter}
         highContrast={highContrast}
         onToggleHighContrast={handleToggleHighContrast}
         blinkEnabled={blinkEnabled}

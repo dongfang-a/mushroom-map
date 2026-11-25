@@ -10,9 +10,12 @@
 
 ## 核心功能
 
-- **13 种 PNW 热门野生食用菌实时生境推演**
-  - 覆盖：冬鸡油菌（Yellowfoot）、刺猬菌（Hedgehog）、黑喇叭菌（Black Trumpet）、野生平菇（Oyster）、熊头猴头菇（Bear's Head Tooth）、黄金/白鸡油菌（Chanterelle）、美洲松茸（Matsutake）、美味牛肝菌（Porcini / King Bolete）、绒盖牛肝菌（Fib King / *Boletus fibrillosus*）、丽柄牛肝菌（Admirable Bolete / *Aureoboletus mirabilis*）、**虎掌菌（Hawk's Wing / *Sarcodon imbricatus*）**、疣柄牛肝菌（Leccinum）与火烧羊肚菌（Burn Morel）。
-  - 基于浏览器端 Canvas 实时合成地形高程、坡度、坡向、地形凹凸度（TPI）、树冠郁闭度（NLCD TCC）、地类掩膜（NLCD 2021 Land Cover，自动剔除水体与城镇）、DEM 水文整平湖面保护及合法林地边界。
+- **14 种 PNW 热门野生食用菌实时生境与生态分区推演**
+  - 覆盖：冬鸡油菌（Yellowfoot）、刺猬菌（Hedgehog）、黑喇叭菌（Black Trumpet）、野生平菇（Oyster）、熊头猴头菇（Bear's Head Tooth）、黄金/白鸡油菌（Chanterelle）、美洲松茸（Matsutake）、**美味牛肝菌（秋）（*Boletus edulis*）**、**美味牛肝菌（春）（*Boletus rex-veris*）**、绒盖牛肝菌（Fib King / *Boletus fibrillosus*）、丽柄牛肝菌（Admirable Bolete / *Aureoboletus mirabilis*）、虎掌菌（Hawk's Wing / *Sarcodon imbricatus*）、疣柄牛肝菌（Leccinum）与火烧羊肚菌（Burn Morel）。
+  - 基于浏览器端 Canvas 实时合成地形高程、坡度、坡向、地形凹凸度（TPI）、树冠郁闭度（NLCD TCC）、地类掩膜（NLCD 2021 Land Cover，自动剔除水体与城镇）、DEM 水文整平湖面保护、**Cascade 东西坡与海岸雾带生态区扣分模型**及合法林地边界。
+- **Cascade 东西坡生态区自动评分 + 分水岭参考线**
+  - 依据太平洋海岸雾带、Cascade 西坡雨林带、分水岭高带与 Cascade 东坡雨影区自动计算各菌种平滑区域加/扣分（如美味牛肝菌（春）与东坡颤杨疣柄偏向东坡，冬鸡油菌/丽柄/绒盖/秋牛肝偏向西坡与海岸，松茸兼容东坡火山带与海岸沙丘）。
+  - 支持在图层抽屉中叠加「**Cascade 分水岭参考线**」并按需一键手动锁定「**全区 / 仅西坡 / 仅东坡**」。
 - **中英文双语、自由度量衡与桌面图标创建（⚙️ 设置齿轮）**
   - 默认跟随浏览器/系统语言（`跟随系统`），可随时手动切换 **简体中文** 或 **English**。
   - 支持 **跟随系统 / 英制（US）/ 公制（SI）** 一键预设，并可逐项自定义：**海拔（`ft` / `m`）**、**温度（`°F` / `°C`）**、**降雨量（`in` / `mm`）**、**距离与地图比例尺（`mi` / `km`）**、**火场面积（`ac` / `ha`）**。
@@ -22,9 +25,9 @@
 - **全局筛选控制与合法林地 AND 过滤**
   - 菌种透明度、筛选强度（0%–100%）、`1Hz` 闪烁对比、高反差雷达色带与轮廓描边，以及一键 **合法林地**（USGS PAD-US）AND 过滤。
 - **当季智能分组与离线 3 角度辨识图鉴**
-  - 按当前月份自动分为「当季 / 季初·尾声 / 非当季」，内置 12 个月出菇日历与 **39 张（13 种 × 3 视角）离线实拍参考图**及有毒混淆种警示。
-- **点选 6 因子深度诊断与本地航点**
-  - 单击地图即可查询该点实时海拔、坡度坡向、树冠郁闭度、微地形、USDA NRCS 土壤质地与排水性、Open-Meteo 24h/7d 降雨与土温、PAD-US 公共林地合法性及火烧历史，并支持保存个人采菇点位。
+  - 按当前月份自动分为「当季 / 季初·尾声 / 非当季」，内置 12 个月出菇日历与 **42 张（14 种 × 3 视角）离线实拍参考图**及有毒混淆种警示。
+- **点选 7 因子深度诊断与本地航点**
+  - 单击地图即可查询该点地类、PNW 生态分区适配度、实时海拔、坡度坡向、树冠郁闭度、微地形、USDA NRCS 土壤质地与排水性、Open-Meteo 24h/7d 降雨与土温、PAD-US 公共林地合法性及火烧历史，并支持保存个人采菇点位。
 
 ---
 
