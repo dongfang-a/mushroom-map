@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Flame,
   Layers,
+  Navigation,
   ShieldCheck,
   Trees,
   X,
@@ -38,6 +39,7 @@ import {
   formatSmallMeters,
   formatTemperatureFromF,
 } from '../utils/units';
+import { getAppleMapsNavUrl, getGoogleMapsNavUrl } from '../utils/waypointsIO';
 
 interface PointInspectorProps {
   data: PointInspection | null;
@@ -623,6 +625,30 @@ export const PointInspector: React.FC<PointInspectorProps> = ({
           {t.privateLandWarnBody}
         </div>
       )}
+
+      {/* External navigation launch links */}
+      <div className="inspector-nav-row">
+        <a
+          className="inspector-nav-btn"
+          href={getGoogleMapsNavUrl(data.lat, data.lng)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Navigation size={13} color="#38bdf8" />
+          <span>{t.wpNavGoogle}</span>
+          <ExternalLink size={11} color="#9aa9a0" />
+        </a>
+        <a
+          className="inspector-nav-btn"
+          href={getAppleMapsNavUrl(data.lat, data.lng)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Navigation size={13} color="#54e36c" />
+          <span>{t.wpNavApple}</span>
+          <ExternalLink size={11} color="#9aa9a0" />
+        </a>
+      </div>
 
       {/* Save waypoint form */}
       {!adding ? (

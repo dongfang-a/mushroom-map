@@ -16,7 +16,9 @@ import {
   Layers,
   Map as MapIcon,
   Palette,
+  Search,
   Settings,
+  Share2,
   ShieldCheck,
   X,
   Zap,
@@ -48,6 +50,7 @@ import {
   getInatHeatmapUrl,
   inatObservationsToGeoJSON,
 } from './services/inatService';
+import type { SearchResultItem } from './services/searchService';
 import {
   loadBasemap,
   loadEcoRegionFilter,
@@ -106,9 +109,19 @@ import type {
   UnitSettings,
 } from './types/map';
 import { formatAreaFromAcres, resolveUnits } from './utils/units';
+import {
+  buildSharedViewUrl,
+  getCleanAppUrl,
+  parseSharedMapState,
+  type SharedMapState,
+  shareOrCopyUrl,
+} from './utils/shareUrl';
+import { mergeWaypoints, parseImportedWaypoints } from './utils/waypointsIO';
 import { LayerDrawer } from './components/LayerDrawer';
 import { PointInspector } from './components/PointInspector';
+import { SearchModal } from './components/SearchModal';
 import { SettingsModal } from './components/SettingsModal';
+import { ShareModal } from './components/ShareModal';
 import { SpeciesGuideModal } from './components/SpeciesGuideModal';
 import { WaypointsSheet } from './components/WaypointsSheet';
 
@@ -117,10 +130,59 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
+const MANAGED_PRESET_IDS = [
+  'wildfires-2025',
+  'wildfires-2024',
+  'usda-ssurgo-soil',
+  'usfs-second-growth',
+  'usfs-wilderness',
+  'usfs-mvum',
+  'noaa-snow',
+  'noaa-precip-7d',
+  'cascade-crest',
+];
+
+function createEmptyInspection(
+  lng: number,
+  lat: number,
+  activeSpeciesId: SpeciesId,
+  inatSighting: InatObservation | null = null,
+  fires: PointInspection['fires'] = [],
+  publicAccess: PointInspection['publicAccess'] = null,
+): PointInspection {
+  return {
+    lng,
+    lat,
+    loading: true,
+    elevationFt: null,
+    elevationM: null,
+    slopeDeg: null,
+    slopePct: null,
+    aspectDeg: null,
+    aspectDir: null,
+    canopyPct: null,
+    concavityM: null,
+    landformLabel: null,
+    activeSpeciesId,
+    activeScore: null,
+    activeTier: null,
+    inatSighting,
+    soil: null,
+    fires,
+    publicAccess,
+    weather: null,
+  };
+}
+
+const INITIAL_SHARED_STATE =
+  typeof window !== 'undefined'
+    ? parseSharedMapState(window.location.hash || window.location.search)
+    : null;
+
 registerCustomTileProtocols();
-setFilterStrength(loadFilterStrength());
+setFilterStrength(INITIAL_SHARED_STATE?.filterStrength ?? loadFilterStrength());
 setHighContrastPalette(loadHighContrast());
-setEcoRegionFilter(loadEcoRegionFilter());
+setEcoRegionFilter(INITIAL_SHARED_STATE?.ecoRegionFilter ?? loadEcoRegionFilter());
 
 function buildInitialStyle(basemapId: BasemapId): maplibregl.StyleSpecification {
   const bm = BASEMAPS.find((b) => b.id === basemapId) || BASEMAPS[0];
@@ -165,9 +227,13 @@ export const App: React.FC = () => {
   const appliedSpeciesKeyRef = useRef<string>('');
   const appliedInatHeatSpeciesRef = useRef<SpeciesId | null>(null);
   const appliedElevRevRef = useRef<number>(-1);
-  const activeSpeciesIdRef = useRef<SpeciesId>(loadSpeciesId());
+  const activeSpeciesIdRef = useRef<SpeciesId>(
+    INITIAL_SHARED_STATE?.speciesId ?? loadSpeciesId(),
+  );
   const filterDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const filterStrengthRef = useRef<number>(loadFilterStrength());
+  const filterStrengthRef = useRef<number>(
+    INITIAL_SHARED_STATE?.filterStrength ?? loadFilterStrength(),
+  );
   const mushroomOpacityRef = useRef<number>(loadMushroomOpacity());
 
   const [prefs, setPrefsState] = useState<AppPreferences>(loadPreferences);
@@ -177,13 +243,17 @@ export const App: React.FC = () => {
   const langRef = useRef<Lang>(lang);
   const unitsRef = useRef<UnitSettings>(units);
 
-  const [speciesId, setSpeciesId] = useState<SpeciesId>(loadSpeciesId);
+  const [speciesId, setSpeciesId] = useState<SpeciesId>(
+    () => INITIAL_SHARED_STATE?.speciesId ?? loadSpeciesId(),
+  );
   const [speciesOverrides, setSpeciesOverridesState] = useState<
     Partial<Record<SpeciesId, SpeciesModelOverride>>
   >(loadSpeciesOverrides);
   const [speciesMenuOpen, setSpeciesMenuOpen] = useState(false);
   const [guideSpeciesId, setGuideSpeciesId] = useState<SpeciesId | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [activeHudCollapsed, setActiveHudCollapsed] = useState(false);
   const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(
     null,
@@ -196,18 +266,48 @@ export const App: React.FC = () => {
     );
   });
 
-  const [basemapId, setBasemapId] = useState<BasemapId>(loadBasemap);
+  const [basemapId, setBasemapId] = useState<BasemapId>(
+    () => INITIAL_SHARED_STATE?.basemapId ?? loadBasemap(),
+  );
   const [mushroomOpacity, setMushroomOpacityState] = useState<number>(loadMushroomOpacity);
-  const [filterStrength, setFilterStrengthState] = useState<number>(loadFilterStrength);
-  const [ecoRegionFilter, setEcoRegionFilterState] =
-    useState<EcoRegionFilter>(loadEcoRegionFilter);
+  const [filterStrength, setFilterStrengthState] = useState<number>(
+    () => INITIAL_SHARED_STATE?.filterStrength ?? loadFilterStrength(),
+  );
+  const [ecoRegionFilter, setEcoRegionFilterState] = useState<EcoRegionFilter>(
+    () => INITIAL_SHARED_STATE?.ecoRegionFilter ?? loadEcoRegionFilter(),
+  );
   const [highContrast, setHighContrastState] = useState<boolean>(loadHighContrast);
   const [blinkEnabled, setBlinkEnabled] = useState<boolean>(false);
   const [overlayStates, setOverlayStates] = useState<Record<string, OverlayRuntimeState>>(() => {
     const base = loadOverlayStates();
     const op = loadMushroomOpacity();
     if (base['species-probability']) {
-      base['species-probability'] = { ...base['species-probability'], opacity: op };
+      base['species-probability'] = {
+        ...base['species-probability'],
+        visible: INITIAL_SHARED_STATE ? true : base['species-probability'].visible,
+        opacity: op,
+      };
+    }
+    if (INITIAL_SHARED_STATE?.speciesId) {
+      const wanted = new Set(getSpeciesProfile(INITIAL_SHARED_STATE.speciesId).presetOverlays);
+      for (const id of MANAGED_PRESET_IDS) {
+        if (base[id]) {
+          base[id] = { ...base[id], visible: wanted.has(id) };
+        }
+      }
+    }
+    if (
+      (INITIAL_SHARED_STATE?.ecoRegionFilter === 'east' ||
+        INITIAL_SHARED_STATE?.ecoRegionFilter === 'west') &&
+      base['cascade-crest']
+    ) {
+      base['cascade-crest'] = { ...base['cascade-crest'], visible: true };
+    }
+    if (INITIAL_SHARED_STATE?.legalOnly !== undefined && base['padus-access']) {
+      base['padus-access'] = {
+        ...base['padus-access'],
+        visible: INITIAL_SHARED_STATE.legalOnly,
+      };
     }
     return base;
   });
@@ -232,7 +332,10 @@ export const App: React.FC = () => {
   const [inspection, setInspection] = useState<PointInspection | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(
-    () => loadViewport()?.center || DEFAULT_CENTER,
+    () => INITIAL_SHARED_STATE?.center || loadViewport()?.center || DEFAULT_CENTER,
+  );
+  const [mapZoom, setMapZoom] = useState<number>(
+    () => INITIAL_SHARED_STATE?.zoom ?? loadViewport()?.zoom ?? DEFAULT_ZOOM,
   );
 
   const activeProfile = getSpeciesProfile(speciesId);
@@ -434,17 +537,6 @@ export const App: React.FC = () => {
     setGuideSpeciesId(nextId);
     setSpeciesRev((r) => r + 1);
 
-    const managedPresetIds = [
-      'wildfires-2025',
-      'wildfires-2024',
-      'usda-ssurgo-soil',
-      'usfs-second-growth',
-      'usfs-wilderness',
-      'usfs-mvum',
-      'noaa-snow',
-      'noaa-precip-7d',
-      'cascade-crest',
-    ];
     const wanted = new Set(profile.presetOverlays);
 
     setOverlayStates((prev) => {
@@ -452,7 +544,7 @@ export const App: React.FC = () => {
         ...prev,
         'species-probability': { ...prev['species-probability'], visible: true },
       };
-      for (const id of managedPresetIds) {
+      for (const id of MANAGED_PRESET_IDS) {
         if (next[id]) {
           next[id] = { ...next[id], visible: wanted.has(id) };
         }
@@ -631,9 +723,9 @@ export const App: React.FC = () => {
     const savedVp = loadViewport();
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: buildInitialStyle(basemapId),
-      center: savedVp?.center || DEFAULT_CENTER,
-      zoom: savedVp?.zoom || DEFAULT_ZOOM,
+      style: buildInitialStyle(INITIAL_SHARED_STATE?.basemapId ?? basemapId),
+      center: INITIAL_SHARED_STATE?.center || savedVp?.center || DEFAULT_CENTER,
+      zoom: INITIAL_SHARED_STATE?.zoom ?? savedVp?.zoom ?? DEFAULT_ZOOM,
       minZoom: 3,
       maxZoom: 18,
       attributionControl: false,
@@ -654,6 +746,7 @@ export const App: React.FC = () => {
       setMapLoaded(true);
       const c = map.getCenter();
       setMapCenter([c.lng, c.lat]);
+      setMapZoom(map.getZoom());
       syncWaypointsOnMap(loadWaypoints());
     });
 
@@ -661,6 +754,7 @@ export const App: React.FC = () => {
       const c = map.getCenter();
       const z = map.getZoom();
       setMapCenter([c.lng, c.lat]);
+      setMapZoom(z);
       saveViewport([c.lng, c.lat], z);
     });
 
@@ -754,28 +848,7 @@ export const App: React.FC = () => {
         }
       }
 
-      setInspection({
-        lng,
-        lat,
-        loading: true,
-        elevationFt: null,
-        elevationM: null,
-        slopeDeg: null,
-        slopePct: null,
-        aspectDeg: null,
-        aspectDir: null,
-        canopyPct: null,
-        concavityM: null,
-        landformLabel: null,
-        activeSpeciesId: curSp,
-        activeScore: null,
-        activeTier: null,
-        inatSighting: tappedInat,
-        soil: null,
-        fires: renderedFires,
-        publicAccess,
-        weather: null,
-      });
+      setInspection(createEmptyInspection(lng, lat, curSp, tappedInat, renderedFires, publicAccess));
 
       const full = await inspectPointDetails(
         lng,
@@ -1322,28 +1395,7 @@ export const App: React.FC = () => {
       } else {
         tapMarkerRef.current.setLngLat([obs.lng, obs.lat]);
       }
-      setInspection({
-        lng: obs.lng,
-        lat: obs.lat,
-        loading: true,
-        elevationFt: null,
-        elevationM: null,
-        slopeDeg: null,
-        slopePct: null,
-        aspectDeg: null,
-        aspectDir: null,
-        canopyPct: null,
-        concavityM: null,
-        landformLabel: null,
-        activeSpeciesId: curSp,
-        activeScore: null,
-        activeTier: null,
-        inatSighting: obs,
-        soil: null,
-        fires: [],
-        publicAccess: null,
-        weather: null,
-      });
+      setInspection(createEmptyInspection(obs.lng, obs.lat, curSp, obs));
       const full = await inspectPointDetails(
         obs.lng,
         obs.lat,
@@ -1435,6 +1487,229 @@ export const App: React.FC = () => {
     [waypoints, syncWaypointsOnMap],
   );
 
+  const handleImportWaypoints = useCallback(
+    (fileText: string, filename: string) => {
+      const tx = UI_TEXT[langRef.current];
+      try {
+        const incoming = parseImportedWaypoints(fileText, filename);
+        const { merged, addedCount, skippedCount } = mergeWaypoints(waypoints, incoming);
+        setWaypoints(merged);
+        saveWaypoints(merged);
+        syncWaypointsOnMap(merged);
+        showToast(tx.toastWpImported(addedCount, skippedCount));
+      } catch {
+        showToast(tx.toastWpImportError);
+      }
+    },
+    [waypoints, syncWaypointsOnMap, showToast],
+  );
+
+  const handleExportFeedback = useCallback(
+    (fmt: 'GPX' | 'JSON' | 'EMPTY', count: number) => {
+      const tx = UI_TEXT[langRef.current];
+      if (fmt === 'EMPTY') {
+        showToast(tx.toastWpEmptyExport);
+      } else {
+        showToast(tx.toastWpExported(fmt, count));
+      }
+    },
+    [showToast],
+  );
+
+  const handleResetSpeciesParams = useCallback(() => {
+    setSpeciesOverridesState((prev) => {
+      const next = { ...prev };
+      delete next[speciesId];
+      return next;
+    });
+    const prof = getSpeciesProfile(speciesId);
+    const shortName = getSpeciesShortName(prof, langRef.current);
+    showToast(UI_TEXT[langRef.current].toastSpeciesReset(shortName));
+  }, [speciesId, showToast]);
+
+  const applySharedState = useCallback(
+    (shared: SharedMapState) => {
+      if (shared.basemapId) {
+        handleSelectBasemap(shared.basemapId);
+      }
+      if (shared.speciesId) {
+        setSpeciesId(shared.speciesId);
+        saveSpeciesId(shared.speciesId);
+      }
+      if (shared.filterStrength !== undefined) {
+        setFilterStrengthState(shared.filterStrength);
+        setFilterStrength(shared.filterStrength);
+        filterStrengthRef.current = shared.filterStrength;
+        saveFilterStrength(shared.filterStrength);
+      }
+      if (shared.ecoRegionFilter !== undefined) {
+        setEcoRegionFilterState(shared.ecoRegionFilter);
+        setEcoRegionFilter(shared.ecoRegionFilter);
+        saveEcoRegionFilter(shared.ecoRegionFilter);
+      }
+
+      setOverlayStates((prev) => {
+        const next: Record<string, OverlayRuntimeState> = {
+          ...prev,
+          'species-probability': { ...prev['species-probability'], visible: true },
+        };
+        if (shared.speciesId) {
+          const wanted = new Set(getSpeciesProfile(shared.speciesId).presetOverlays);
+          for (const id of MANAGED_PRESET_IDS) {
+            if (next[id]) {
+              next[id] = { ...next[id], visible: wanted.has(id) };
+            }
+          }
+        }
+        if (
+          (shared.ecoRegionFilter === 'east' || shared.ecoRegionFilter === 'west') &&
+          next['cascade-crest']
+        ) {
+          next['cascade-crest'] = { ...next['cascade-crest'], visible: true };
+        }
+        if (shared.legalOnly !== undefined && next['padus-access']) {
+          next['padus-access'] = { ...next['padus-access'], visible: shared.legalOnly };
+          setLegalMaskEnabled(shared.legalOnly);
+        }
+        return next;
+      });
+
+      setSpeciesRev((r) => r + 1);
+      if (shared.center && mapRef.current) {
+        mapRef.current.flyTo({
+          center: shared.center,
+          zoom: shared.zoom ?? mapRef.current.getZoom(),
+          duration: 950,
+        });
+      }
+      showToast(UI_TEXT[langRef.current].toastSharedViewLoaded);
+    },
+    [handleSelectBasemap, showToast],
+  );
+
+  // Toast when launched from a shared map URL + support editing/pasting URL hashes live
+  useEffect(() => {
+    if (INITIAL_SHARED_STATE) {
+      showToast(UI_TEXT[langRef.current].toastSharedViewLoaded);
+    }
+    const onHashChange = () => {
+      const parsed = parseSharedMapState(window.location.hash);
+      if (parsed) applySharedState(parsed);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [applySharedState, showToast]);
+
+  // Global keyboard shortcuts ('/' or Ctrl/Cmd+K) for Search
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isEditing =
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable);
+      if ((e.key === 'k' && (e.ctrlKey || e.metaKey)) || (!isEditing && e.key === '/')) {
+        e.preventDefault();
+        setSpeciesMenuOpen(false);
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  const handleSelectSearchResult = useCallback(
+    async (item: SearchResultItem) => {
+      setSearchOpen(false);
+      if (item.kind === 'share-link' && item.sharedState) {
+        applySharedState(item.sharedState);
+        return;
+      }
+
+      const map = mapRef.current;
+      if (map) {
+        map.flyTo({ center: [item.lng, item.lat], zoom: item.zoom, duration: 950 });
+      }
+      showToast(UI_TEXT[langRef.current].toastSearchJumped(item.title));
+
+      if (item.kind === 'coord' && map) {
+        if (!tapMarkerRef.current) {
+          tapMarkerRef.current = new maplibregl.Marker({ color: '#38bdf8' })
+            .setLngLat([item.lng, item.lat])
+            .addTo(map);
+        } else {
+          tapMarkerRef.current.setLngLat([item.lng, item.lat]);
+        }
+        const curSp = activeSpeciesIdRef.current;
+        setInspection(createEmptyInspection(item.lng, item.lat, curSp));
+        const full = await inspectPointDetails(
+          item.lng,
+          item.lat,
+          curSp,
+          [],
+          null,
+          filterStrengthRef.current,
+          langRef.current,
+          unitsRef.current,
+        );
+        setInspection(full);
+      }
+    },
+    [applySharedState, showToast],
+  );
+
+  const handleShareApp = useCallback(
+    async (preferNative = false) => {
+      const tx = UI_TEXT[langRef.current];
+      const res = await shareOrCopyUrl({
+        title: tx.pageTitle,
+        text: tx.shareAppCardDesc,
+        url: getCleanAppUrl(),
+        preferNative,
+      });
+      if (res === 'copied') showToast(tx.shareCopiedApp);
+      else if (res === 'failed') showToast(tx.shareCopyFailed);
+    },
+    [showToast],
+  );
+
+  const handleShareView = useCallback(
+    async (preferNative = false) => {
+      const tx = UI_TEXT[langRef.current];
+      const url = buildSharedViewUrl({
+        speciesId,
+        center: mapCenter,
+        zoom: mapZoom,
+        filterStrength,
+        ecoRegionFilter,
+        legalOnly: !!overlayStates['padus-access']?.visible,
+        basemapId,
+      });
+      const prof = getSpeciesProfile(speciesId);
+      const shortName = getSpeciesShortName(prof, langRef.current);
+      const res = await shareOrCopyUrl({
+        title: `${prof.emoji} ${shortName} · ${tx.pageTitle}`,
+        text: `${prof.emoji} ${shortName} (${mapCenter[1].toFixed(4)}, ${mapCenter[0].toFixed(4)})`,
+        url,
+        preferNative,
+      });
+      if (res === 'copied') showToast(tx.shareCopiedView);
+      else if (res === 'failed') showToast(tx.shareCopyFailed);
+    },
+    [
+      speciesId,
+      mapCenter,
+      mapZoom,
+      filterStrength,
+      ecoRegionFilter,
+      overlayStates,
+      basemapId,
+      showToast,
+    ],
+  );
+
   const speciesMapVisible = !!overlayStates['species-probability']?.visible;
   const legalZonesVisible = !!overlayStates['padus-access']?.visible;
   const activeLegendItems = highContrast ? HIGH_CONTRAST_LEGENDS : activeProfile.legends;
@@ -1509,9 +1784,21 @@ export const App: React.FC = () => {
         </svg>
       </div>
 
-      {/* Top HUD with Dropdown Species Selector & Legal Zones Toggle */}
+      {/* Top HUD with Search Button, Dropdown Species Selector & Legal Zones Toggle */}
       <header className="top-bar">
         <div className="quick-chips">
+          <button
+            className="chip-btn search-trigger-btn"
+            onClick={() => {
+              setSpeciesMenuOpen(false);
+              setSearchOpen(true);
+            }}
+            aria-label="Search locations or coordinates"
+            title={t.searchBtnTitle}
+          >
+            <Search size={14} color="#facc15" />
+          </button>
+
           {/* Dropdown Species Selector */}
           <div className="species-dropdown-wrap">
             <button
@@ -1717,6 +2004,15 @@ export const App: React.FC = () => {
 
         <button
           className="fab-btn"
+          onClick={() => setShareOpen(true)}
+          aria-label="Share app or view"
+          title={t.shareBtnTitle}
+        >
+          <Share2 size={19} color="#a78bfa" />
+        </button>
+
+        <button
+          className="fab-btn"
           onClick={() => setSettingsOpen(true)}
           aria-label="Language and units settings"
           title={t.settingsTitle}
@@ -1863,7 +2159,7 @@ export const App: React.FC = () => {
 
       {toast && <div className="toast">{toast}</div>}
 
-      {/* Settings Modal (Language, Units & Create Desktop Icon) */}
+      {/* Settings Modal (Language, Units, Desktop Icon & Share) */}
       <SettingsModal
         open={settingsOpen}
         prefs={prefs}
@@ -1871,8 +2167,39 @@ export const App: React.FC = () => {
         canNativeInstall={Boolean(installPromptEvent)}
         isInstalledPwa={isInstalledPwa}
         onTriggerInstall={handleTriggerInstall}
+        onShareApp={() => handleShareApp(true)}
+        onShareView={() => handleShareView(true)}
         onChangePrefs={handleChangePrefs}
         onClose={() => setSettingsOpen(false)}
+      />
+
+      {/* Search Modal (Places / Trailheads / Passes / Coords / Links) */}
+      <SearchModal
+        open={searchOpen}
+        lang={lang}
+        units={units}
+        mapCenter={mapCenter}
+        waypoints={waypoints}
+        fires={fires}
+        onClose={() => setSearchOpen(false)}
+        onSelectResult={handleSelectSearchResult}
+      />
+
+      {/* Share Modal (Clean APP URL + Stateful View URL) */}
+      <ShareModal
+        open={shareOpen}
+        lang={lang}
+        speciesId={speciesId}
+        speciesLabel={`${activeProfile.emoji} ${activeSpeciesShort}`}
+        center={mapCenter}
+        zoom={mapZoom}
+        filterStrength={filterStrength}
+        ecoRegionFilter={ecoRegionFilter}
+        legalOnly={legalZonesVisible}
+        basemapId={basemapId}
+        onShareApp={handleShareApp}
+        onShareView={handleShareView}
+        onClose={() => setShareOpen(false)}
       />
 
       {/* Species Characteristics & Season Popup Modal */}
@@ -1899,6 +2226,7 @@ export const App: React.FC = () => {
         onChangeSpeciesParams={(next) =>
           setSpeciesOverridesState((prev) => ({ ...prev, [speciesId]: next }))
         }
+        onResetSpeciesParams={handleResetSpeciesParams}
         filterStrength={filterStrength}
         onChangeFilterStrength={handleFilterStrengthChange}
         ecoRegionFilter={ecoRegionFilter}
@@ -1937,6 +2265,8 @@ export const App: React.FC = () => {
           showToast(t.toastFlewSpot(wp.name));
         }}
         onDelete={handleDeleteWaypoint}
+        onImportWaypoints={handleImportWaypoints}
+        onExportFeedback={handleExportFeedback}
       />
 
       <PointInspector

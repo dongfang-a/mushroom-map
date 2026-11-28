@@ -9,6 +9,7 @@ import {
   Map as MapIcon,
   Navigation,
   RefreshCw,
+  RotateCcw,
   X,
 } from 'lucide-react';
 import {
@@ -20,6 +21,15 @@ import {
 import { getSpeciesProfile, getSpeciesShortName } from '../data/speciesCatalog';
 import { UI_TEXT } from '../i18n/translations';
 import { HIGH_CONTRAST_LEGENDS } from '../services/tileEngines';
+import {
+  BAND_MAX_ELEV_CFG,
+  BAND_MIN_ELEV_CFG,
+  elevFtToLogSlider,
+  LOG_SLIDER_STEPS,
+  logSliderToElevFt,
+  SPECIES_MAX_ELEV_CFG,
+  SPECIES_MIN_ELEV_CFG,
+} from '../utils/elevationScale';
 import { formatDistanceFromCenter, haversineMiles } from '../utils/geo';
 import {
   formatAreaFromAcres,
@@ -55,6 +65,7 @@ interface LayerDrawerProps {
   onOpacityChange: (id: string, opacity: number) => void;
   speciesParams: SpeciesModelOverride;
   onChangeSpeciesParams: (next: SpeciesModelOverride) => void;
+  onResetSpeciesParams: () => void;
   filterStrength: number;
   onChangeFilterStrength: (val: number) => void;
   ecoRegionFilter: EcoRegionFilter;
@@ -95,6 +106,7 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
   onOpacityChange,
   speciesParams,
   onChangeSpeciesParams,
+  onResetSpeciesParams,
   filterStrength,
   onChangeFilterStrength,
   ecoRegionFilter,
@@ -403,18 +415,23 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                       <input
                                         type="range"
                                         min={0}
-                                        max={6000}
-                                        step={100}
-                                        value={speciesParams.minElevFt}
-                                        onChange={(e) =>
+                                        max={LOG_SLIDER_STEPS}
+                                        step={1}
+                                        value={elevFtToLogSlider(
+                                          speciesParams.minElevFt,
+                                          SPECIES_MIN_ELEV_CFG,
+                                        )}
+                                        onChange={(e) => {
+                                          const nextFt = logSliderToElevFt(
+                                            Number(e.target.value),
+                                            SPECIES_MIN_ELEV_CFG,
+                                            units.elevation,
+                                          );
                                           onChangeSpeciesParams({
                                             ...speciesParams,
-                                            minElevFt: Math.min(
-                                              Number(e.target.value),
-                                              speciesParams.maxElevFt - 300,
-                                            ),
-                                          })
-                                        }
+                                            minElevFt: Math.min(nextFt, speciesParams.maxElevFt - 200),
+                                          });
+                                        }}
                                       />
                                       <span>{formatElevation(speciesParams.minElevFt, units)}</span>
                                     </div>
@@ -422,22 +439,48 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                       <span>{t.maxElevLabel}</span>
                                       <input
                                         type="range"
-                                        min={1000}
-                                        max={9000}
-                                        step={100}
-                                        value={speciesParams.maxElevFt}
-                                        onChange={(e) =>
+                                        min={0}
+                                        max={LOG_SLIDER_STEPS}
+                                        step={1}
+                                        value={elevFtToLogSlider(
+                                          speciesParams.maxElevFt,
+                                          SPECIES_MAX_ELEV_CFG,
+                                        )}
+                                        onChange={(e) => {
+                                          const nextFt = logSliderToElevFt(
+                                            Number(e.target.value),
+                                            SPECIES_MAX_ELEV_CFG,
+                                            units.elevation,
+                                          );
                                           onChangeSpeciesParams({
                                             ...speciesParams,
-                                            maxElevFt: Math.max(
-                                              Number(e.target.value),
-                                              speciesParams.minElevFt + 300,
-                                            ),
-                                          })
-                                        }
+                                            maxElevFt: Math.max(nextFt, speciesParams.minElevFt + 200),
+                                          });
+                                        }}
                                       />
                                       <span>{formatElevation(speciesParams.maxElevFt, units)}</span>
                                     </div>
+                                    <div className="log-scale-hint">{t.logScaleHint}</div>
+                                    {(() => {
+                                      const isCustomized =
+                                        Math.abs(speciesParams.minElevFt - profile.defaults.minElevFt) > 1 ||
+                                        Math.abs(speciesParams.maxElevFt - profile.defaults.maxElevFt) > 1 ||
+                                        speciesParams.minCanopyPct !== profile.defaults.minCanopyPct ||
+                                        speciesParams.useCanopy !== profile.defaults.useCanopy ||
+                                        speciesParams.burnScarOnly !== profile.defaults.burnScarOnly;
+                                      return (
+                                        <button
+                                          className={`reset-params-btn ${isCustomized ? 'dirty' : ''}`}
+                                          disabled={!isCustomized}
+                                          onClick={onResetSpeciesParams}
+                                        >
+                                          <RotateCcw size={12} />
+                                          <span>
+                                            {isCustomized ? t.resetSpeciesBtn : t.resetSpeciesDone}
+                                          </span>
+                                        </button>
+                                      );
+                                    })()}
                                   </>
                                 )}
 
@@ -448,18 +491,23 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                       <input
                                         type="range"
                                         min={0}
-                                        max={10000}
-                                        step={150}
-                                        value={elevBandParams.minFt}
-                                        onChange={(e) =>
+                                        max={LOG_SLIDER_STEPS}
+                                        step={1}
+                                        value={elevFtToLogSlider(
+                                          elevBandParams.minFt,
+                                          BAND_MIN_ELEV_CFG,
+                                        )}
+                                        onChange={(e) => {
+                                          const nextFt = logSliderToElevFt(
+                                            Number(e.target.value),
+                                            BAND_MIN_ELEV_CFG,
+                                            units.elevation,
+                                          );
                                           onChangeElevBandParams({
                                             ...elevBandParams,
-                                            minFt: Math.min(
-                                              Number(e.target.value),
-                                              elevBandParams.maxFt - 200,
-                                            ),
-                                          })
-                                        }
+                                            minFt: Math.min(nextFt, elevBandParams.maxFt - 200),
+                                          });
+                                        }}
                                       />
                                       <span>{formatElevation(elevBandParams.minFt, units)}</span>
                                     </div>
@@ -467,22 +515,40 @@ export const LayerDrawer: React.FC<LayerDrawerProps> = ({
                                       <span>{t.elevBandMaxLabel}</span>
                                       <input
                                         type="range"
-                                        min={500}
-                                        max={13000}
-                                        step={150}
-                                        value={elevBandParams.maxFt}
-                                        onChange={(e) =>
+                                        min={0}
+                                        max={LOG_SLIDER_STEPS}
+                                        step={1}
+                                        value={elevFtToLogSlider(
+                                          elevBandParams.maxFt,
+                                          BAND_MAX_ELEV_CFG,
+                                        )}
+                                        onChange={(e) => {
+                                          const nextFt = logSliderToElevFt(
+                                            Number(e.target.value),
+                                            BAND_MAX_ELEV_CFG,
+                                            units.elevation,
+                                          );
                                           onChangeElevBandParams({
                                             ...elevBandParams,
-                                            maxFt: Math.max(
-                                              Number(e.target.value),
-                                              elevBandParams.minFt + 200,
-                                            ),
-                                          })
-                                        }
+                                            maxFt: Math.max(nextFt, elevBandParams.minFt + 200),
+                                          });
+                                        }}
                                       />
                                       <span>{formatElevation(elevBandParams.maxFt, units)}</span>
                                     </div>
+                                    <div className="log-scale-hint">{t.logScaleHint}</div>
+                                    {(Math.abs(elevBandParams.minFt - 150) > 1 ||
+                                      Math.abs(elevBandParams.maxFt - 3000) > 1) && (
+                                      <button
+                                        className="reset-params-btn dirty"
+                                        onClick={() =>
+                                          onChangeElevBandParams({ minFt: 150, maxFt: 3000 })
+                                        }
+                                      >
+                                        <RotateCcw size={12} />
+                                        <span>{t.resetElevBandBtn}</span>
+                                      </button>
+                                    )}
                                   </>
                                 )}
 

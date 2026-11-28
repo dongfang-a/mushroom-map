@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Globe, Ruler, Settings, Smartphone, X } from 'lucide-react';
+import { CheckCircle2, Globe, Link2, Ruler, Settings, Share2, Smartphone, X } from 'lucide-react';
 import type { AppPreferences, Lang, LangPref, UnitPreset, UnitSettings } from '../types/map';
 import { detectSystemLang, UI_TEXT } from '../i18n/translations';
 import {
@@ -16,6 +16,8 @@ interface SettingsModalProps {
   canNativeInstall: boolean;
   isInstalledPwa: boolean;
   onTriggerInstall: () => Promise<boolean>;
+  onShareApp: () => void;
+  onShareView: () => void;
   onChangePrefs: (next: AppPreferences) => void;
   onClose: () => void;
 }
@@ -38,6 +40,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   canNativeInstall,
   isInstalledPwa,
   onTriggerInstall,
+  onShareApp,
+  onShareView,
   onChangePrefs,
   onClose,
 }) => {
@@ -322,6 +326,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 )}
               </>
             )}
+          </div>
+
+          {/* Share App & Current Map View */}
+          <div className="settings-section">
+            <div className="settings-section-title">
+              <Share2 size={14} color="#a78bfa" />
+              <span>{t.settingsShareHeading}</span>
+            </div>
+            <div style={{ fontSize: 10.5, color: '#9aa9a0', lineHeight: 1.4 }}>
+              {t.settingsShareHint}
+            </div>
+            <div className="segmented-2">
+              <button className="seg-btn active" onClick={onShareApp}>
+                <Link2 size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+                {t.settingsShareAppBtn}
+              </button>
+              <button className="seg-btn" onClick={onShareView}>
+                <Share2 size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+                {t.settingsShareViewBtn}
+              </button>
+            </div>
           </div>
         </div>
 
